@@ -1,0 +1,102 @@
+name: Generate Daily Briefing
+
+on:
+  schedule:
+    # 06:00 UTC = 07:00 CET (winter, UTC+1).
+    # During CEST (summer, UTC+2), this fires at 08:00 local time.
+    # Manual adjustment required:
+    #   Last Sunday of March  → change to '0 5 * * *'  (CEST begins)
+    #   Last Sunday of October → change to '0 6 * * *' (CET begins)
+    - cron: '0 6 * * *'
+  workflow_dispatch:   # Allow manual trigger for testing
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies (ffmpeg for pydub)
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate app icon (first run only)
+        run: |
+          if [ ! -f web/icon.png ]; then
+            python scripts/generate_icon.py
+          else
+            echo "Icon already exists — skipping."
+          fi
+
+      - name: Download Freesound audio assets (first run only)
+        run: python scripts/download_audio_assets.py
+        env:
+          FREESOUND_API_KEY: ${{ secrets.FREESOUND_API_KEY }}
+
+      - name: Fetch geopolitical news
+        run: python scripts/fetch_geo_news.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Fetch markets news
+        run: python scripts/fetch_market_news.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Generate Carmen's script
+        run: python scripts/generate_script.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Synthesise audio segments
+        run: python scripts/synthesise_audio.py
+
+      - name: Stitch episode
+        run: python scripts/stitch_audio.py
+
+      - name: Manage archive
+        run: python scripts/manage_archive.py
+
+      - name: Commit and push episode
+        run: |
+          git config user.name "Carmen Bot"
+          git config user.email "carmen@briefing.bot"
+          git add episodes/ web/
+          git commit -m "Episode: $(date +%Y-%m-%d)" || echo "Nothing to commit"
+          git push
+
+  deploy:
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main   # Ensure we deploy the freshly committed episode
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

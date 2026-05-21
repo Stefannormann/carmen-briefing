@@ -1,0 +1,18 @@
+{
+  "name": "Carmen Briefing",
+  "short_name": "Carmen",
+  "description": "Your daily personalised audio news briefing.",
+  "start_url": "/web/index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1a2e",
+  "theme_color": "#e94560",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

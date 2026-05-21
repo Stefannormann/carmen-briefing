@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Carmen" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <title>Carmen Briefing</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #1a1a2e;
+      --surface:    #16213e;
+      --accent:     #e94560;
+      --gold:       #f5a623;
+      --text:       #e8e8f0;
+      --muted:      #8888a8;
+      --radius:     14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 20px);
+    }
+
+    header {
+      text-align: center;
+      padding: 36px 0 20px;
+    }
+    header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    header h1 span { color: var(--accent); }
+    header p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .player-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .episode-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .episode-date {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    #play-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    #play-btn:active { transform: scale(0.94); }
+    #play-btn svg { width: 28px; height: 28px; fill: #fff; }
+
+    .time-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    #progress {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: #2e2e50;
+      outline: none;
+      cursor: pointer;
+    }
+    #progress::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .timestamps {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .status {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* Archive list */
+    .archive {
+      width: 100%;
+      max-width: 480px;
+    }
+    .archive h2 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .ep-item {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      border: 2px solid transparent;
+    }
+    .ep-item.active { border-color: var(--accent); }
+    .ep-item:active { opacity: 0.7; }
+
+    .ep-icon {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: #2e2e50;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .ep-icon svg { width: 16px; height: 16px; fill: var(--gold); }
+
+    .ep-info { flex: 1; min-width: 0; }
+    .ep-title { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ep-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    /* Add to home screen banner */
+    #a2hs {
+      display: none;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      color: var(--text);
+      border-left: 3px solid var(--gold);
+    }
+    #a2hs strong { color: var(--gold); }
+    #a2hs button {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; float: right; font-size: 1rem; line-height: 1;
+    }
+
+    footer {
+      margin-top: auto;
+      padding-top: 28px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Carmen <span>Briefing</span></h1>
+  <p id="header-date">Loading…</p>
+</header>
+
+<div id="a2hs">
+  <button onclick="document.getElementById('a2hs').style.display='none'" aria-label="Dismiss">×</button>
+  <strong>Add to Home Screen</strong> — tap the Share button in Safari, then
+  "Add to Home Screen" for one-tap access every morning.
+</div>
+
+<div class="player-card" id="player-card">
+  <div class="episode-title" id="ep-title">Loading episode…</div>
+  <div class="episode-date" id="ep-date"></div>
+
+  <div class="controls">
+    <button id="play-btn" aria-label="Play / Pause">
+      <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="icon-pause" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <div class="time-info">
+      <input type="range" id="progress" value="0" min="0" max="100" step="0.1" />
+      <div class="timestamps">
+        <span id="time-current">0:00</span>
+        <span id="time-total">--:--</span>
+      </div>
+    </div>
+  </div>
+  <div class="status" id="status">Select an episode below</div>
+</div>
+
+<div class="archive">
+  <h2>Recent Episodes</h2>
+  <div id="ep-list">Loading…</div>
+</div>
+
+<footer>Carmen Briefing · Generated daily · Powered by Gemini &amp; edge-tts</footer>
+
+<audio id="audio"></audio>
+
+<script>
+  const audio = document.getElementById('audio');
+  const playBtn = document.getElementById('play-btn');
+  const iconPlay = document.getElementById('icon-play');
+  const iconPause = document.getElementById('icon-pause');
+  const progress = document.getElementById('progress');
+  const timeCurrent = document.getElementById('time-current');
+  const timeTotal = document.getElementById('time-total');
+  const statusEl = document.getElementById('status');
+  const epTitle = document.getElementById('ep-title');
+  const epDate = document.getElementById('ep-date');
+  const headerDate = document.getElementById('header-date');
+  const epList = document.getElementById('ep-list');
+
+  let episodes = [];
+  let activeIndex = -1;
+
+  function fmt(secs) {
+    const s = Math.floor(secs);
+    return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  }
+
+  function setPlaying(playing) {
+    iconPlay.style.display = playing ? 'none' : '';
+    iconPause.style.display = playing ? '' : 'none';
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (!audio.src) return;
+    audio.paused ? audio.play() : audio.pause();
+  });
+
+  audio.addEventListener('play', () => setPlaying(true));
+  audio.addEventListener('pause', () => setPlaying(false));
+  audio.addEventListener('ended', () => setPlaying(false));
+
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    const pct = (audio.currentTime / audio.duration) * 100;
+    progress.value = pct;
+    timeCurrent.textContent = fmt(audio.currentTime);
+  });
+
+  audio.addEventListener('loadedmetadata', () => {
+    timeTotal.textContent = fmt(audio.duration);
+    progress.max = 100;
+  });
+
+  audio.addEventListener('waiting', () => statusEl.textContent = 'Buffering…');
+  audio.addEventListener('playing', () => statusEl.textContent = 'Playing');
+  audio.addEventListener('error', () => statusEl.textContent = 'Playback error — check connection.');
+
+  progress.addEventListener('input', () => {
+    if (audio.duration) {
+      audio.currentTime = (progress.value / 100) * audio.duration;
+    }
+  });
+
+  function loadEpisode(index) {
+    const ep = episodes[index];
+    if (!ep) return;
+    activeIndex = index;
+
+    epTitle.textContent = ep.title;
+    epDate.textContent = new Date(ep.date + 'T00:00:00').toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+    statusEl.textContent = 'Ready';
+    timeCurrent.textContent = '0:00';
+    timeTotal.textContent = ep.duration_seconds ? fmt(ep.duration_seconds) : '--:--';
+    progress.value = 0;
+
+    audio.src = `../episodes/${ep.filename}`;
+    audio.load();
+    audio.play().catch(() => statusEl.textContent = 'Tap play to start');
+
+    // Update active state in list
+    document.querySelectorAll('.ep-item').forEach((el, i) => {
+      el.classList.toggle('active', i === index);
+    });
+  }
+
+  function renderList() {
+    if (!episodes.length) {
+      epList.innerHTML = '<p style="color:var(--muted);font-size:.85rem">No episodes yet.</p>';
+      return;
+    }
+    epList.innerHTML = episodes.map((ep, i) => `
+      <div class="ep-item${i === activeIndex ? ' active' : ''}" onclick="loadEpisode(${i})">
+        <div class="ep-icon">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        <div class="ep-info">
+          <div class="ep-title">${ep.title}</div>
+          <div class="ep-meta">${ep.duration_seconds ? fmt(ep.duration_seconds) : ''}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function init() {
+    // Show today's date in header
+    headerDate.textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+    // Add-to-home-screen prompt (Safari only, standalone check)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    const dismissed = localStorage.getItem('a2hs_dismissed');
+    if (!isStandalone && isSafari && !dismissed) {
+      document.getElementById('a2hs').style.display = 'block';
+      document.querySelector('#a2hs button').addEventListener('click', () => {
+        localStorage.setItem('a2hs_dismissed', '1');
+      });
+    }
+
+    // Load episode index
+    try {
+      const resp = await fetch('../episodes/index.json?v=' + Date.now());
+      if (!resp.ok) throw new Error('No index');
+      episodes = await resp.json();
+    } catch {
+      epList.innerHTML = '<p style="color:var(--muted);font-size:.85rem">No episodes available yet — check back after the first scheduled run.</p>';
+      epTitle.textContent = 'No episodes yet';
+      return;
+    }
+
+    renderList();
+
+    if (episodes.length) {
+      // Auto-select today's or latest episode
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayIdx = episodes.findIndex(e => e.date === todayStr);
+      const startIdx = todayIdx >= 0 ? todayIdx : 0;
+      epTitle.textContent = episodes[startIdx].title;
+      epDate.textContent = new Date(episodes[startIdx].date + 'T00:00:00').toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+      if (episodes[startIdx].duration_seconds) {
+        timeTotal.textContent = fmt(episodes[startIdx].duration_seconds);
+      }
+      statusEl.textContent = 'Tap play to listen';
+      audio.src = `../episodes/${episodes[startIdx].filename}`;
+      activeIndex = startIdx;
+      renderList();
+    }
+  }
+
+  init();
+
+  // Register service worker for offline caching
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
