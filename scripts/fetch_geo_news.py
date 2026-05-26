@@ -52,7 +52,7 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
         GEMINI_URL,
         params={"key": GEMINI_API_KEY},
         json=payload,
-        timeout=60,
+        timeout=120,
     )
     resp.raise_for_status()
     return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -170,12 +170,10 @@ def tag_topics(articles: list[dict]) -> list[dict]:
 
 # ── Step 5: Gemini scoring ────────────────────────────────────────────────────
 
-def score_articles(articles: list[dict], dry_run: bool = False) -> list[dict]:
-    watchlist_companies = ", ".join(get_all_names())
-    articles_for_scoring = [
-        {"id": i, "headline": a["headline"], "summary": a["summary_snippet"]}
-        for i, a in enumerate(articles)
-    ]
+SCORE_BATCH_SIZE = 25  # articles per Gemini call — keeps each request fast
+
+def _score_batch(batch: list[dict], watchlist_companies: str, dry_run: bool) -> list[dict]:
+    """Score a single batch of articles. Returns list of {id, score, watchlist_flag, watchlist_note}."""
     prompt = (
         "You are a geopolitical news editor. Score each of the following articles "
         "for newsworthiness on a scale of 1–10:\n\n"
@@ -188,13 +186,12 @@ def score_articles(articles: list[dict], dry_run: bool = False) -> list[dict]:
         "Return ONLY a valid JSON array. Each object must have exactly:\n"
         '{"id": <int>, "score": <int>, "watchlist_flag": <bool>, "watchlist_note": <string>}\n\n'
         "Articles:\n"
-        + json.dumps(articles_for_scoring, ensure_ascii=False)
+        + json.dumps(batch, ensure_ascii=False)
     )
     raw = gemini_call(prompt, dry_run)
     if dry_run:
-        return articles
+        return []
 
-    # Strip markdown code fences if present
     raw = raw.strip()
     if raw.startswith("```"):
         raw = "\n".join(raw.splitlines()[1:])
@@ -202,13 +199,36 @@ def score_articles(articles: list[dict], dry_run: bool = False) -> list[dict]:
         raw = "\n".join(raw.splitlines()[:-1])
 
     try:
-        scores = json.loads(raw.strip())
+        return json.loads(raw.strip())
     except json.JSONDecodeError as e:
-        print(f"ERROR: Failed to parse Gemini scoring response: {e}", file=sys.stderr)
+        print(f"ERROR: Failed to parse Gemini batch response: {e}", file=sys.stderr)
         print(f"Raw response: {raw[:500]}", file=sys.stderr)
         sys.exit(1)
 
-    score_map = {s["id"]: s for s in scores}
+
+def score_articles(articles: list[dict], dry_run: bool = False) -> list[dict]:
+    watchlist_companies = ", ".join(get_all_names())
+    articles_for_scoring = [
+        {"id": i, "headline": a["headline"], "summary": a["summary_snippet"]}
+        for i, a in enumerate(articles)
+    ]
+
+    score_map: dict[int, dict] = {}
+    batches = [
+        articles_for_scoring[i:i + SCORE_BATCH_SIZE]
+        for i in range(0, len(articles_for_scoring), SCORE_BATCH_SIZE)
+    ]
+    print(f"Scoring {len(articles)} articles in {len(batches)} batch(es) of ≤{SCORE_BATCH_SIZE}…")
+
+    for batch_num, batch in enumerate(batches, 1):
+        print(f"  Batch {batch_num}/{len(batches)} ({len(batch)} articles)…")
+        results = _score_batch(batch, watchlist_companies, dry_run)
+        for r in results:
+            score_map[r["id"]] = r
+
+    if dry_run:
+        return articles
+
     for i, a in enumerate(articles):
         if i in score_map:
             a["score"] = score_map[i].get("score", 0)
