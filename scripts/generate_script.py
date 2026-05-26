@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from datetime import date
 from pathlib import Path
 
@@ -96,14 +97,30 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
             "maxOutputTokens": 4096,
         },
     }
-    resp = requests.post(
-        GEMINI_URL,
-        params={"key": GEMINI_API_KEY},
-        json=payload,
-        timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+    retries = 4
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.post(
+                GEMINI_URL,
+                params={"key": GEMINI_API_KEY},
+                json=payload,
+                timeout=120,
+            )
+            if resp.status_code in (429, 503, 529) and attempt < retries:
+                wait = 10 * attempt
+                print(f"  Gemini {resp.status_code} — retrying in {wait}s (attempt {attempt}/{retries})…")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        except requests.exceptions.ReadTimeout:
+            if attempt < retries:
+                wait = 15 * attempt
+                print(f"  Gemini timeout — retrying in {wait}s (attempt {attempt}/{retries})…")
+                time.sleep(wait)
+            else:
+                raise
+    raise RuntimeError("Gemini call failed after all retries")
 
 
 def load_json(path: Path, label: str) -> list:

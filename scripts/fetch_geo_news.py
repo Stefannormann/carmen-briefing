@@ -40,7 +40,7 @@ MIN_TIER1_SCORE = 5
 
 # ── Gemini helper ─────────────────────────────────────────────────────────────
 
-def gemini_call(prompt: str, dry_run: bool = False) -> str:
+def gemini_call(prompt: str, dry_run: bool = False, retries: int = 4) -> str:
     if dry_run:
         print(f"[DRY-RUN] Gemini prompt ({len(prompt)} chars):\n{prompt[:300]}…\n")
         return ""
@@ -48,14 +48,29 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
         print("ERROR: GEMINI_API_KEY not set.", file=sys.stderr)
         sys.exit(1)
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    resp = requests.post(
-        GEMINI_URL,
-        params={"key": GEMINI_API_KEY},
-        json=payload,
-        timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.post(
+                GEMINI_URL,
+                params={"key": GEMINI_API_KEY},
+                json=payload,
+                timeout=120,
+            )
+            if resp.status_code in (429, 503, 529) and attempt < retries:
+                wait = 10 * attempt  # 10s, 20s, 30s back-off
+                print(f"  Gemini {resp.status_code} — retrying in {wait}s (attempt {attempt}/{retries})…")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        except requests.exceptions.ReadTimeout:
+            if attempt < retries:
+                wait = 15 * attempt
+                print(f"  Gemini timeout — retrying in {wait}s (attempt {attempt}/{retries})…")
+                time.sleep(wait)
+            else:
+                raise
+    raise RuntimeError("Gemini call failed after all retries")
 
 
 # ── Step 1: Fetch RSS ─────────────────────────────────────────────────────────
