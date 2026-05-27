@@ -148,28 +148,43 @@ def deduplicate(articles: list[dict]) -> list[dict]:
     return kept
 
 
-# ── Step 3: Translate Danish ──────────────────────────────────────────────────
+# ── Step 3: Translate Danish (batched — one Gemini call for all articles) ─────
 
 def translate_danish(articles: list[dict], dry_run: bool = False) -> list[dict]:
     danish_articles = [a for a in articles if a["feed_url"] in DANISH_LANGUAGE_SOURCES]
     if not danish_articles:
         return articles
-    print(f"Translating {len(danish_articles)} Danish articles…")
-    for a in danish_articles:
-        prompt = (
-            "Translate the following Danish news headline and summary to English.\n"
-            "Return only the translated text in this exact format:\n"
-            "HEADLINE: <translated headline>\nSUMMARY: <translated summary>\n\n"
-            f"Headline: {a['headline']}\nSummary: {a['summary_snippet']}"
-        )
-        raw = gemini_call(prompt, dry_run)
-        if raw:
-            lines = raw.strip().splitlines()
-            for line in lines:
-                if line.startswith("HEADLINE:"):
-                    a["headline"] = line.replace("HEADLINE:", "").strip()
-                elif line.startswith("SUMMARY:"):
-                    a["summary_snippet"] = line.replace("SUMMARY:", "").strip()
+    print(f"Translating {len(danish_articles)} Danish articles in one batch…")
+
+    batch = [
+        {"id": i, "headline": a["headline"], "summary": a["summary_snippet"]}
+        for i, a in enumerate(danish_articles)
+    ]
+    prompt = (
+        "Translate each of the following Danish news headlines and summaries into English.\n"
+        "Return ONLY a valid JSON array. Each object must have exactly:\n"
+        '{"id": <int>, "headline": "<translated>", "summary": "<translated>"}\n\n'
+        "Articles:\n" + json.dumps(batch, ensure_ascii=False)
+    )
+    raw = gemini_call(prompt, dry_run)
+    if not raw:
+        return articles
+
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = "\n".join(raw.splitlines()[1:])
+    if raw.endswith("```"):
+        raw = "\n".join(raw.splitlines()[:-1])
+
+    try:
+        translated = json.loads(raw.strip())
+        t_map = {t["id"]: t for t in translated}
+        for i, a in enumerate(danish_articles):
+            if i in t_map:
+                a["headline"] = t_map[i].get("headline", a["headline"])
+                a["summary_snippet"] = t_map[i].get("summary", a["summary_snippet"])
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"  WARN: Danish translation parse failed ({e}) — using originals.", file=sys.stderr)
     return articles
 
 

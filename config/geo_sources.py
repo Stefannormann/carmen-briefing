@@ -16,10 +16,9 @@ GEO_RSS_TIER_1 = [
 ]
 
 GEO_RSS_TIER_2 = [
-    "https://www.dr.dk/nyheder/service/feeds/allenyheder",
-    "https://politiken.dk/rss",
+    # Danish sources removed — DR/Politiken/Altinget required per-article Gemini
+    # translation calls that caused rate limiting. CPH Post publishes in English.
     "https://cphpost.dk/?feed=rss2",
-    "https://www.altinget.dk/feed",
     "https://www.euractiv.com/feed/",
     "https://feeds.reuters.com/reuters/companyNews",
     "https://www.aljazeera.com/xml/rss/all.xml",
@@ -28,9 +27,5 @@ GEO_RSS_TIER_2 = [
     "https://feeds.arstechnica.com/arstechnica/index",
 ]
 
-# Sources that publish in Danish — headlines/summaries translated via Gemini before scoring
-DANISH_LANGUAGE_SOURCES = [
-    "https://www.dr.dk/nyheder/service/feeds/allenyheder",
-    "https://politiken.dk/rss",
-    "https://www.altinget.dk/feed",
-]
+# No Danish-language sources active — list kept empty for easy re-activation
+DANISH_LANGUAGE_SOURCES: list[str] = []
