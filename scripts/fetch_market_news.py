@@ -222,7 +222,7 @@ def score_articles(all_articles: list[dict], dry_run: bool = False) -> list[dict
         return all_articles
 
     for i, a in enumerate(all_articles):
-        a["score"] = score_map.get(i, 0)
+        a["score"] = score_map.get(i, 5)  # default 5 if batch failed
 
     return all_articles
 
@@ -237,8 +237,7 @@ def select_best_per_company(all_articles: list[dict]) -> list[dict]:
     best = []
     for ticker, articles in by_company.items():
         top = max(articles, key=lambda x: x["score"])
-        if top["score"] > 0:
-            best.append(top)
+        best.append(top)  # always include best story per company
     return best
 
 

@@ -259,11 +259,16 @@ def score_articles(articles: list[dict], dry_run: bool = False) -> list[dict]:
     if dry_run:
         return articles
 
+    scored_count = 0
     for i, a in enumerate(articles):
         if i in score_map:
-            a["score"] = score_map[i].get("score", 0)
+            a["score"] = score_map[i].get("score", 5)  # default 5 if missing
             a["watchlist_flag"] = score_map[i].get("watchlist_flag", False)
             a["watchlist_note"] = score_map[i].get("watchlist_note", "")
+            scored_count += 1
+        else:
+            a["score"] = 5  # fallback: treat unscored articles as neutral
+    print(f"Scored {scored_count}/{len(articles)} articles (rest defaulted to 5).")
     return articles
 
 
@@ -299,6 +304,11 @@ def select_stories(articles: list[dict]) -> list[dict]:
 
     # Pass 2: fill remaining slots from all articles (including tier2 topics)
     pick(sorted_articles, min_score=1)
+
+    # Pass 3 fallback: if scoring failed and everything scored 0, just take top N
+    if not selected:
+        print("  WARN: No stories passed score threshold — using top articles as fallback.")
+        pick(sorted_articles, min_score=0)
 
     print(f"Selected {len(selected)} geopolitical stories.")
     return selected
