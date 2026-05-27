@@ -146,45 +146,81 @@ def fetch_company_news(company: dict, cutoff: datetime) -> list[dict]:
     return articles
 
 
-# ── Score all company articles ────────────────────────────────────────────────
+# ── Pre-filter: keep only the N most recent articles per company ──────────────
+
+MAX_ARTICLES_PER_COMPANY = 3  # score at most this many per company
+
+def prefilter_articles(all_articles: list[dict]) -> list[dict]:
+    """Keep the MAX_ARTICLES_PER_COMPANY most recent articles per ticker."""
+    by_ticker: dict[str, list] = {}
+    for a in all_articles:
+        by_ticker.setdefault(a["ticker"], []).append(a)
+    filtered = []
+    for ticker, articles in by_ticker.items():
+        # Sort by published_at descending, keep top N
+        sorted_arts = sorted(articles, key=lambda x: x.get("published_at", ""), reverse=True)
+        filtered.extend(sorted_arts[:MAX_ARTICLES_PER_COMPANY])
+    print(f"Pre-filtered to {len(filtered)} articles ({MAX_ARTICLES_PER_COMPANY} max per company).")
+    return filtered
+
+
+# ── Score all company articles (batched) ─────────────────────────────────────
+
+SCORE_BATCH_SIZE = 25
 
 def score_articles(all_articles: list[dict], dry_run: bool = False) -> list[dict]:
     if not all_articles:
         return []
+
+    # Pre-filter before scoring to keep API calls manageable
+    all_articles = prefilter_articles(all_articles)
 
     articles_for_scoring = [
         {"id": i, "company": a["company"], "ticker": a["ticker"],
          "headline": a["headline"], "summary": a["summary_snippet"]}
         for i, a in enumerate(all_articles)
     ]
-    prompt = (
-        "You are a financial news editor. Score each of the following company news articles "
-        "for newsworthiness on a scale of 1–10:\n\n"
-        "  8–10: Major announcement, earnings surprise, regulatory action, or significant strategic move\n"
-        "  5–7:  Notable development, product launch, partnership, or analyst upgrade/downgrade\n"
-        "  1–4:  Routine update, minor news, or background coverage\n\n"
-        "Return ONLY a valid JSON array. Each object must have exactly:\n"
-        '{"id": <int>, "score": <int>}\n\n'
-        "Articles:\n"
-        + json.dumps(articles_for_scoring, ensure_ascii=False)
-    )
-    raw = gemini_call(prompt, dry_run)
+
+    score_map: dict[int, int] = {}
+    batches = [
+        articles_for_scoring[i:i + SCORE_BATCH_SIZE]
+        for i in range(0, len(articles_for_scoring), SCORE_BATCH_SIZE)
+    ]
+    print(f"Scoring {len(all_articles)} articles in {len(batches)} batch(es) of ≤{SCORE_BATCH_SIZE}…")
+
+    for batch_num, batch in enumerate(batches, 1):
+        print(f"  Batch {batch_num}/{len(batches)} ({len(batch)} articles)…")
+        prompt = (
+            "You are a financial news editor. Score each of the following company news articles "
+            "for newsworthiness on a scale of 1–10:\n\n"
+            "  8–10: Major announcement, earnings surprise, regulatory action, or significant strategic move\n"
+            "  5–7:  Notable development, product launch, partnership, or analyst upgrade/downgrade\n"
+            "  1–4:  Routine update, minor news, or background coverage\n\n"
+            "Return ONLY a valid JSON array. Each object must have exactly:\n"
+            '{"id": <int>, "score": <int>}\n\n'
+            "Articles:\n"
+            + json.dumps(batch, ensure_ascii=False)
+        )
+        raw = gemini_call(prompt, dry_run)
+        if dry_run:
+            continue
+
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = "\n".join(raw.splitlines()[1:])
+        if raw.endswith("```"):
+            raw = "\n".join(raw.splitlines()[:-1])
+
+        try:
+            scores = json.loads(raw.strip())
+            for s in scores:
+                score_map[s["id"]] = s["score"]
+        except json.JSONDecodeError as e:
+            print(f"  WARN: Failed to parse batch {batch_num} scores ({e}) — skipping batch.", file=sys.stderr)
+
     if dry_run:
         return all_articles
 
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = "\n".join(raw.splitlines()[1:])
-    if raw.endswith("```"):
-        raw = "\n".join(raw.splitlines()[:-1])
-
-    try:
-        scores = json.loads(raw.strip())
-    except json.JSONDecodeError as e:
-        print(f"ERROR: Failed to parse Gemini market scoring response: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    score_map = {s["id"]: s["score"] for s in scores}
     for i, a in enumerate(all_articles):
         a["score"] = score_map.get(i, 0)
 
