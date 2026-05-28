@@ -156,43 +156,28 @@ def prefilter_articles(all_articles: list[dict]) -> list[dict]:
 # ── Fetch social signals ──────────────────────────────────────────────────────
 
 def fetch_reddit_posts(dry_run: bool = False) -> list[dict]:
-    """Fetch today's top posts from market-relevant subreddits."""
+    """Fetch today's top posts from market-relevant subreddits (no auth required)."""
     if dry_run:
         print("[DRY-RUN] Skipping Reddit fetch.")
         return []
 
-    client_id     = os.environ.get("REDDIT_CLIENT_ID", "")
-    client_secret = os.environ.get("REDDIT_CLIENT_SECRET", "")
-    if not client_id or not client_secret:
-        print("  WARN: REDDIT_CLIENT_ID/SECRET not set — social signal will use baseline.",
-              file=sys.stderr)
-        return []
-
-    try:
-        import praw
-    except ImportError:
-        print("  WARN: praw not installed — social signal will use baseline.", file=sys.stderr)
-        return []
-
     posts: list[dict] = []
-    try:
-        reddit = praw.Reddit(
-            client_id=client_id,
-            client_secret=client_secret,
-            user_agent="CarmenBriefingBot/1.0 (read-only news aggregator)",
-        )
-        for sub_name in MARKET_REDDIT_SUBS:
-            try:
-                sub = reddit.subreddit(sub_name)
-                for post in sub.top(time_filter="day", limit=100):
-                    posts.append({
-                        "title": post.title.lower(),
-                        "score": max(0, post.score),
-                    })
-            except Exception as e:
-                print(f"  WARN: Reddit r/{sub_name}: {e}", file=sys.stderr)
-    except Exception as e:
-        print(f"  WARN: Reddit init failed: {e}", file=sys.stderr)
+    headers = {"User-Agent": "CarmenBriefingBot/1.0"}
+
+    for sub_name in MARKET_REDDIT_SUBS:
+        try:
+            url  = f"https://www.reddit.com/r/{sub_name}/top.json?t=day&limit=100"
+            resp = requests.get(url, headers=headers, timeout=15)
+            resp.raise_for_status()
+            for child in resp.json().get("data", {}).get("children", []):
+                post = child.get("data", {})
+                posts.append({
+                    "title": (post.get("title") or "").lower(),
+                    "score": max(0, post.get("score") or 0),
+                })
+            time.sleep(1)   # be polite to Reddit's servers
+        except Exception as e:
+            print(f"  WARN: Reddit r/{sub_name}: {e}", file=sys.stderr)
 
     print(f"Fetched {len(posts)} Reddit posts from {len(MARKET_REDDIT_SUBS)} subreddits.")
     return posts

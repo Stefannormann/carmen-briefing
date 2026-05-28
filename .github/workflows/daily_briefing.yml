@@ -47,15 +47,9 @@ jobs:
 
       - name: Fetch geopolitical news
         run: python scripts/fetch_geo_news.py
-        env:
-          REDDIT_CLIENT_ID:     ${{ secrets.REDDIT_CLIENT_ID }}
-          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
 
       - name: Fetch markets news
         run: python scripts/fetch_market_news.py
-        env:
-          REDDIT_CLIENT_ID:     ${{ secrets.REDDIT_CLIENT_ID }}
-          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
 
       - name: Generate Carmen's script
         run: python scripts/generate_script.py
