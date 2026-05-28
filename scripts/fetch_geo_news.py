@@ -231,9 +231,9 @@ def _score_batch(batch: list[dict], watchlist_companies: str, dry_run: bool) -> 
     try:
         return json.loads(raw.strip())
     except json.JSONDecodeError as e:
-        print(f"ERROR: Failed to parse Gemini batch response: {e}", file=sys.stderr)
-        print(f"Raw response: {raw[:500]}", file=sys.stderr)
-        sys.exit(1)
+        print(f"  WARN: Failed to parse Gemini batch response ({e}) — skipping batch, using defaults.", file=sys.stderr)
+        print(f"  Raw response: {raw[:300]}", file=sys.stderr)
+        return []  # caller will apply default score of 5
 
 
 def score_articles(articles: list[dict], dry_run: bool = False) -> list[dict]:
@@ -252,6 +252,8 @@ def score_articles(articles: list[dict], dry_run: bool = False) -> list[dict]:
 
     for batch_num, batch in enumerate(batches, 1):
         print(f"  Batch {batch_num}/{len(batches)} ({len(batch)} articles)…")
+        if batch_num > 1:
+            time.sleep(3)  # brief pause between batches to respect rate limits
         results = _score_batch(batch, watchlist_companies, dry_run)
         for r in results:
             score_map[r["id"]] = r

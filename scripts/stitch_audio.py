@@ -31,7 +31,9 @@ def load_audio(path: Path):
 
 
 def normalise(segment, target_dbfs: float = -18.0):
-    """Normalise a segment to a target dBFS level."""
+    """Normalise a segment to a target dBFS level. Skips silent segments."""
+    if segment.dBFS == float("-inf"):
+        return segment  # silent segment — return as-is to avoid inf gain
     diff = target_dbfs - segment.dBFS
     return segment.apply_gain(diff)
 

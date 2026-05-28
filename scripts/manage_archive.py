@@ -30,7 +30,7 @@ def format_title(filename: str) -> str:
     """Turn '2025-01-15.mp3' into 'Carmen's Briefing — Wednesday 15 January'."""
     try:
         d = date.fromisoformat(filename.replace(".mp3", ""))
-        return f"Carmen's Briefing — {d.strftime('%A %-d %B')}"
+        return f"Carmen's Briefing — {d.strftime('%A')} {d.day} {d.strftime('%B')}"
     except ValueError:
         return f"Carmen's Briefing — {filename}"
 

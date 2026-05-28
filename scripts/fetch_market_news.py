@@ -190,6 +190,8 @@ def score_articles(all_articles: list[dict], dry_run: bool = False) -> list[dict
 
     for batch_num, batch in enumerate(batches, 1):
         print(f"  Batch {batch_num}/{len(batches)} ({len(batch)} articles)…")
+        if batch_num > 1:
+            time.sleep(3)  # brief pause between batches to respect rate limits
         prompt = (
             "You are a financial news editor. Score each of the following company news articles "
             "for newsworthiness on a scale of 1–10:\n\n"

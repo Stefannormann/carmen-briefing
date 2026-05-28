@@ -94,7 +94,7 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 4096,
+            "maxOutputTokens": 8192,
         },
     }
     retries = 4
@@ -142,8 +142,10 @@ def main():
     geo_stories = load_json(GEO_FILE, "geo_stories")
     market_stories = load_json(MARKET_FILE, "market_stories")
 
-    # Apply watchlist prioritisation to market stories
-    market_stories = prioritise_stories(market_stories)
+    # Apply watchlist prioritisation and cap to top 15 companies
+    # (39 companies is too many for a 4-minute segment)
+    market_stories = prioritise_stories(market_stories)[:15]
+    print(f"Using {len(geo_stories)} geo stories and {len(market_stories)} market stories.")
 
     today = date.today().strftime("%A, %d %B %Y")
 
