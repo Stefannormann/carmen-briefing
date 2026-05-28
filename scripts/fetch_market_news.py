@@ -1,5 +1,15 @@
 """
 Fetch and score company/markets news from Yahoo Finance RSS and other sources.
+
+Two-gate selection system:
+  Gate 1 – company name / ticker present in article (implicit via Yahoo Finance RSS)
+  Gate 2 – composite popularity score:
+            0.35 * social    (Reddit upvotes + HN points, normalised)
+          + 0.15 * authority (publisher domain reputation)
+          + 0.25 * coverage  (TF-IDF cluster size across all company articles)
+          + 0.15 * trend     (flat 0.50 — pytrends dropped)
+          + 0.10 * recency   (exponential decay, 12-hour half-life)
+
 Saves scored results to tmp/market_stories.json.
 
 Usage:
@@ -8,6 +18,7 @@ Usage:
 
 import argparse
 import json
+import math
 import os
 import sys
 import time
@@ -19,77 +30,53 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.watchlist import get_all_companies
+from config.publisher_authority import get_authority
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+# ── Reddit subreddits for market / company news ───────────────────────────────
+MARKET_REDDIT_SUBS = ["investing", "stocks", "finance", "wallstreetbets"]
 
+# ── Config ────────────────────────────────────────────────────────────────────
 TMP_DIR = Path("tmp")
 OUT_FILE = TMP_DIR / "market_stories.json"
 
-CUTOFF_HOURS = 24
+CUTOFF_HOURS            = 24
+MAX_ARTICLES_PER_COMPANY = 5   # fetch up to this many before popularity filtering
+SIM_THRESHOLD           = 0.65
 
-# Supplementary RSS sources keyed by ticker (extend as needed)
+# Composite score weights
+W_SOCIAL    = 0.35
+W_AUTHORITY = 0.15
+W_COVERAGE  = 0.25
+W_TREND     = 0.15
+W_RECENCY   = 0.10
+TREND_SCORE = 0.50
+
+SOCIAL_NOT_FOUND = 0.20
+
+# Supplementary RSS sources keyed by ticker
 EXTRA_RSS = {
     "NVDA": ["https://feeds.reuters.com/reuters/technologyNews"],
     "TSLA": ["https://feeds.reuters.com/reuters/companyNews"],
 }
 
 
-# ── Gemini helper ─────────────────────────────────────────────────────────────
-
-def gemini_call(prompt: str, dry_run: bool = False, retries: int = 4) -> str:
-    if dry_run:
-        print(f"[DRY-RUN] Gemini prompt ({len(prompt)} chars):\n{prompt[:300]}…\n")
-        return ""
-    if not GEMINI_API_KEY:
-        print("ERROR: GEMINI_API_KEY not set.", file=sys.stderr)
-        sys.exit(1)
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    for attempt in range(1, retries + 1):
-        try:
-            resp = requests.post(
-                GEMINI_URL,
-                params={"key": GEMINI_API_KEY},
-                json=payload,
-                timeout=120,
-            )
-            if resp.status_code in (429, 503, 529) and attempt < retries:
-                wait = 10 * attempt
-                print(f"  Gemini {resp.status_code} — retrying in {wait}s (attempt {attempt}/{retries})…")
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-        except requests.exceptions.ReadTimeout:
-            if attempt < retries:
-                wait = 15 * attempt
-                print(f"  Gemini timeout — retrying in {wait}s (attempt {attempt}/{retries})…")
-                time.sleep(wait)
-            else:
-                raise
-    raise RuntimeError("Gemini call failed after all retries")
-
-
 # ── Fetch news for a single company ──────────────────────────────────────────
 
 def fetch_company_news(company: dict, cutoff: datetime) -> list[dict]:
-    ticker = company["ticker"]
-    name = company["name"]
+    ticker   = company["ticker"]
+    name     = company["name"]
     exchange = company["exchange"]
-    tier = company["tier"]
-
+    tier     = company["tier"]
     articles = []
 
-    # Yahoo Finance RSS — works best for US-listed tickers
-    yahoo_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
-    # Korean exchange tickers not supported on Yahoo Finance RSS; skip gracefully
-    if exchange in ("KRX",):
-        # Fall back to keyword search via Tier 1 Reuters feed results in geo fetch
-        pass
-    else:
+    # Yahoo Finance RSS — best for US-listed tickers
+    # KRX (Korean exchange) tickers are not supported on Yahoo Finance RSS
+    if exchange not in ("KRX",):
+        yahoo_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
         try:
-            feed = feedparser.parse(yahoo_url, request_headers={"User-Agent": "CarmenBriefingBot/1.0"})
+            feed = feedparser.parse(
+                yahoo_url, request_headers={"User-Agent": "CarmenBriefingBot/1.0"}
+            )
             for entry in feed.entries:
                 published = None
                 if hasattr(entry, "published_parsed") and entry.published_parsed:
@@ -97,19 +84,19 @@ def fetch_company_news(company: dict, cutoff: datetime) -> list[dict]:
                 if published and published < cutoff:
                     continue
                 headline = getattr(entry, "title", "").strip()
-                summary = getattr(entry, "summary", "")[:500].strip()
+                summary  = getattr(entry, "summary", "")[:500].strip()
                 if not headline:
                     continue
                 articles.append({
-                    "company": name,
-                    "ticker": ticker,
-                    "tier": tier,
-                    "headline": headline,
-                    "source": "Yahoo Finance",
-                    "source_url": getattr(entry, "link", ""),
-                    "published_at": published.isoformat() if published else "",
+                    "company":         name,
+                    "ticker":          ticker,
+                    "tier":            tier,
+                    "headline":        headline,
+                    "source":          "Yahoo Finance",
+                    "source_url":      getattr(entry, "link", ""),
+                    "published_at":    published.isoformat() if published else "",
                     "summary_snippet": summary,
-                    "score": 0,
+                    "score":           5,
                 })
         except Exception as e:
             print(f"  WARN: Yahoo Finance RSS failed for {ticker}: {e}", file=sys.stderr)
@@ -117,11 +104,14 @@ def fetch_company_news(company: dict, cutoff: datetime) -> list[dict]:
     # Extra supplementary feeds for select tickers
     for url in EXTRA_RSS.get(ticker, []):
         try:
-            feed = feedparser.parse(url, request_headers={"User-Agent": "CarmenBriefingBot/1.0"})
+            feed = feedparser.parse(
+                url, request_headers={"User-Agent": "CarmenBriefingBot/1.0"}
+            )
             for entry in feed.entries:
                 headline = getattr(entry, "title", "").strip()
-                # Only include if company name or ticker mentioned
-                if name.lower() not in headline.lower() and ticker.lower() not in headline.lower():
+                # Only include if company name or ticker is mentioned
+                if (name.lower() not in headline.lower()
+                        and ticker.lower() not in headline.lower()):
                     continue
                 published = None
                 if hasattr(entry, "published_parsed") and entry.published_parsed:
@@ -130,15 +120,15 @@ def fetch_company_news(company: dict, cutoff: datetime) -> list[dict]:
                     continue
                 summary = getattr(entry, "summary", "")[:500].strip()
                 articles.append({
-                    "company": name,
-                    "ticker": ticker,
-                    "tier": tier,
-                    "headline": headline,
-                    "source": url,
-                    "source_url": getattr(entry, "link", ""),
-                    "published_at": published.isoformat() if published else "",
+                    "company":         name,
+                    "ticker":          ticker,
+                    "tier":            tier,
+                    "headline":        headline,
+                    "source":          url,
+                    "source_url":      getattr(entry, "link", ""),
+                    "published_at":    published.isoformat() if published else "",
                     "summary_snippet": summary,
-                    "score": 0,
+                    "score":           5,
                 })
         except Exception as e:
             print(f"  WARN: Extra RSS failed for {ticker}: {e}", file=sys.stderr)
@@ -146,100 +136,260 @@ def fetch_company_news(company: dict, cutoff: datetime) -> list[dict]:
     return articles
 
 
-# ── Pre-filter: keep only the N most recent articles per company ──────────────
-
-MAX_ARTICLES_PER_COMPANY = 3  # score at most this many per company
+# ── Pre-filter: keep N most recent per company ────────────────────────────────
 
 def prefilter_articles(all_articles: list[dict]) -> list[dict]:
-    """Keep the MAX_ARTICLES_PER_COMPANY most recent articles per ticker."""
+    """Keep MAX_ARTICLES_PER_COMPANY most recent articles per ticker."""
     by_ticker: dict[str, list] = {}
     for a in all_articles:
         by_ticker.setdefault(a["ticker"], []).append(a)
     filtered = []
     for ticker, articles in by_ticker.items():
-        # Sort by published_at descending, keep top N
-        sorted_arts = sorted(articles, key=lambda x: x.get("published_at", ""), reverse=True)
+        sorted_arts = sorted(
+            articles, key=lambda x: x.get("published_at", ""), reverse=True
+        )
         filtered.extend(sorted_arts[:MAX_ARTICLES_PER_COMPANY])
-    print(f"Pre-filtered to {len(filtered)} articles ({MAX_ARTICLES_PER_COMPANY} max per company).")
+    print(f"Pre-filtered to {len(filtered)} articles ({MAX_ARTICLES_PER_COMPANY} max/company).")
     return filtered
 
 
-# ── Score all company articles (batched) ─────────────────────────────────────
+# ── Fetch social signals ──────────────────────────────────────────────────────
 
-SCORE_BATCH_SIZE = 25
-
-def score_articles(all_articles: list[dict], dry_run: bool = False) -> list[dict]:
-    if not all_articles:
+def fetch_reddit_posts(dry_run: bool = False) -> list[dict]:
+    """Fetch today's top posts from market-relevant subreddits."""
+    if dry_run:
+        print("[DRY-RUN] Skipping Reddit fetch.")
         return []
 
-    # Pre-filter before scoring to keep API calls manageable
-    all_articles = prefilter_articles(all_articles)
+    client_id     = os.environ.get("REDDIT_CLIENT_ID", "")
+    client_secret = os.environ.get("REDDIT_CLIENT_SECRET", "")
+    if not client_id or not client_secret:
+        print("  WARN: REDDIT_CLIENT_ID/SECRET not set — social signal will use baseline.",
+              file=sys.stderr)
+        return []
 
-    articles_for_scoring = [
-        {"id": i, "company": a["company"], "ticker": a["ticker"],
-         "headline": a["headline"], "summary": a["summary_snippet"]}
-        for i, a in enumerate(all_articles)
-    ]
+    try:
+        import praw
+    except ImportError:
+        print("  WARN: praw not installed — social signal will use baseline.", file=sys.stderr)
+        return []
 
-    score_map: dict[int, int] = {}
-    batches = [
-        articles_for_scoring[i:i + SCORE_BATCH_SIZE]
-        for i in range(0, len(articles_for_scoring), SCORE_BATCH_SIZE)
-    ]
-    print(f"Scoring {len(all_articles)} articles in {len(batches)} batch(es) of ≤{SCORE_BATCH_SIZE}…")
-
-    for batch_num, batch in enumerate(batches, 1):
-        print(f"  Batch {batch_num}/{len(batches)} ({len(batch)} articles)…")
-        if batch_num > 1:
-            time.sleep(3)  # brief pause between batches to respect rate limits
-        prompt = (
-            "You are a financial news editor. Score each of the following company news articles "
-            "for newsworthiness on a scale of 1–10:\n\n"
-            "  8–10: Major announcement, earnings surprise, regulatory action, or significant strategic move\n"
-            "  5–7:  Notable development, product launch, partnership, or analyst upgrade/downgrade\n"
-            "  1–4:  Routine update, minor news, or background coverage\n\n"
-            "Return ONLY a valid JSON array. Each object must have exactly:\n"
-            '{"id": <int>, "score": <int>}\n\n'
-            "Articles:\n"
-            + json.dumps(batch, ensure_ascii=False)
+    posts: list[dict] = []
+    try:
+        reddit = praw.Reddit(
+            client_id=client_id,
+            client_secret=client_secret,
+            user_agent="CarmenBriefingBot/1.0 (read-only news aggregator)",
         )
-        raw = gemini_call(prompt, dry_run)
-        if dry_run:
-            continue
+        for sub_name in MARKET_REDDIT_SUBS:
+            try:
+                sub = reddit.subreddit(sub_name)
+                for post in sub.top(time_filter="day", limit=100):
+                    posts.append({
+                        "title": post.title.lower(),
+                        "score": max(0, post.score),
+                    })
+            except Exception as e:
+                print(f"  WARN: Reddit r/{sub_name}: {e}", file=sys.stderr)
+    except Exception as e:
+        print(f"  WARN: Reddit init failed: {e}", file=sys.stderr)
 
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = "\n".join(raw.splitlines()[1:])
-        if raw.endswith("```"):
-            raw = "\n".join(raw.splitlines()[:-1])
+    print(f"Fetched {len(posts)} Reddit posts from {len(MARKET_REDDIT_SUBS)} subreddits.")
+    return posts
 
-        try:
-            scores = json.loads(raw.strip())
-            for s in scores:
-                score_map[s["id"]] = s["score"]
-        except json.JSONDecodeError as e:
-            print(f"  WARN: Failed to parse batch {batch_num} scores ({e}) — skipping batch.", file=sys.stderr)
 
+def fetch_hn_posts(dry_run: bool = False) -> list[dict]:
+    """Fetch today's HN stories via Algolia API (no key required)."""
     if dry_run:
-        return all_articles
+        print("[DRY-RUN] Skipping HN fetch.")
+        return []
 
-    for i, a in enumerate(all_articles):
-        a["score"] = score_map.get(i, 5)  # default 5 if batch failed
+    cutoff_ts = int((datetime.now(timezone.utc) - timedelta(hours=24)).timestamp())
+    url = (
+        "https://hn.algolia.com/api/v1/search_by_date"
+        f"?tags=story&numericFilters=created_at_i>{cutoff_ts}&hitsPerPage=200"
+    )
+    try:
+        resp = requests.get(url, timeout=20)
+        resp.raise_for_status()
+        hits = resp.json().get("hits", [])
+        posts = [
+            {
+                "title": (h.get("title") or "").lower(),
+                "score": max(0, h.get("points") or 0),
+            }
+            for h in hits
+            if h.get("title")
+        ]
+        print(f"Fetched {len(posts)} HN stories.")
+        return posts
+    except Exception as e:
+        print(f"  WARN: HN fetch failed: {e}", file=sys.stderr)
+        return []
 
-    return all_articles
+
+# ── TF-IDF story clustering ───────────────────────────────────────────────────
+
+def build_clusters(articles: list[dict]) -> list[int]:
+    """
+    Assign cluster IDs by TF-IDF cosine similarity >= SIM_THRESHOLD.
+    Returns a list of cluster IDs, one per article.
+    """
+    if len(articles) < 2:
+        return list(range(len(articles)))
+
+    texts = [a["headline"] + " " + a.get("summary_snippet", "") for a in articles]
+
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+
+        vec        = TfidfVectorizer(stop_words="english", max_features=5000)
+        tfidf      = vec.fit_transform(texts)
+        sim_matrix = cosine_similarity(tfidf)
+
+        cluster_ids  = [-1] * len(articles)
+        next_cluster = 0
+
+        for i in range(len(articles)):
+            if cluster_ids[i] != -1:
+                continue
+            cluster_ids[i] = next_cluster
+            for j in range(i + 1, len(articles)):
+                if cluster_ids[j] == -1 and sim_matrix[i, j] >= SIM_THRESHOLD:
+                    cluster_ids[j] = next_cluster
+            next_cluster += 1
+
+        return cluster_ids
+
+    except ImportError:
+        print("  WARN: scikit-learn not installed — each article is its own cluster.",
+              file=sys.stderr)
+        return list(range(len(articles)))
+
+
+def _cluster_sizes(cluster_ids: list[int]) -> dict[int, int]:
+    sizes: dict[int, int] = {}
+    for cid in cluster_ids:
+        sizes[cid] = sizes.get(cid, 0) + 1
+    return sizes
+
+
+# ── Scoring helpers ───────────────────────────────────────────────────────────
+
+_STOP = {
+    "the", "a", "an", "in", "on", "at", "to", "for", "of", "and", "or",
+    "is", "are", "was", "were", "has", "have", "will", "with", "by",
+    "from", "as", "its", "it", "that", "this", "be", "but", "not",
+}
+
+def _social_score_company(
+    headline:      str,
+    company_name:  str,
+    ticker:        str,
+    reddit_posts:  list[dict],
+    hn_posts:      list[dict],
+) -> float:
+    """
+    Normalized 0–1 social score for a company article.
+    A post matches if it mentions the ticker or company name
+    AND has ≥ 2 words in common with the headline.
+    """
+    ticker_lower  = ticker.lower()
+    company_lower = company_name.lower()
+    words         = set(headline.lower().split()) - _STOP
+
+    def _matches(post_title: str) -> bool:
+        if ticker_lower not in post_title and company_lower not in post_title:
+            return False
+        post_words = set(post_title.split()) - _STOP
+        return len(words & post_words) >= 2 or ticker_lower in post_title
+
+    best_reddit = max(
+        (p["score"] for p in reddit_posts if _matches(p["title"])), default=0
+    )
+    best_hn = max(
+        (p["score"] for p in hn_posts if _matches(p["title"])), default=0
+    )
+
+    r_norm = min(math.log1p(best_reddit) / math.log1p(5000), 1.0) if best_reddit > 0 else 0.0
+    h_norm = min(math.log1p(best_hn)     / math.log1p(500),  1.0) if best_hn     > 0 else 0.0
+
+    if best_reddit > 0 and best_hn > 0:
+        return (r_norm + h_norm) / 2
+    elif best_reddit > 0:
+        return r_norm
+    elif best_hn > 0:
+        return h_norm
+    else:
+        return SOCIAL_NOT_FOUND
+
+
+def _recency_score(published_at: str) -> float:
+    """Exponential decay with 12-hour half-life."""
+    if not published_at:
+        return 0.50
+    try:
+        pub = datetime.fromisoformat(published_at)
+        if pub.tzinfo is None:
+            pub = pub.replace(tzinfo=timezone.utc)
+        age_hours = (datetime.now(timezone.utc) - pub).total_seconds() / 3600
+        return math.exp(-age_hours * math.log(2) / 12)
+    except Exception:
+        return 0.50
+
+
+# ── Score all articles ────────────────────────────────────────────────────────
+
+def score_popularity(
+    articles:     list[dict],
+    reddit_posts: list[dict],
+    hn_posts:     list[dict],
+    cluster_ids:  list[int],
+    sizes:        dict[int, int],
+) -> list[dict]:
+    """Apply composite popularity formula to each article."""
+    for i, a in enumerate(articles):
+        social    = _social_score_company(
+            a["headline"], a["company"], a["ticker"], reddit_posts, hn_posts
+        )
+        authority = get_authority(a["source_url"])
+        coverage  = min(sizes.get(cluster_ids[i], 1) / 5.0, 1.0)
+        recency   = _recency_score(a["published_at"])
+
+        composite = (
+            W_SOCIAL    * social    +
+            W_AUTHORITY * authority +
+            W_COVERAGE  * coverage  +
+            W_TREND     * TREND_SCORE +
+            W_RECENCY   * recency
+        )
+        composite = min(composite, 1.0)
+
+        a["score"] = max(1, round(composite * 9) + 1)
+        a["popularity"] = {
+            "social":    round(social,    3),
+            "authority": round(authority, 3),
+            "coverage":  round(coverage,  3),
+            "trend":     TREND_SCORE,
+            "recency":   round(recency,   3),
+            "composite": round(composite, 3),
+        }
+
+    return articles
 
 
 # ── Per-company best story selection ─────────────────────────────────────────
 
 def select_best_per_company(all_articles: list[dict]) -> list[dict]:
     """Keep only the highest-scoring article per company."""
-    by_company: dict[str, list] = {}
+    by_ticker: dict[str, list] = {}
     for a in all_articles:
-        by_company.setdefault(a["ticker"], []).append(a)
+        by_ticker.setdefault(a["ticker"], []).append(a)
     best = []
-    for ticker, articles in by_company.items():
+    for ticker, articles in by_ticker.items():
         top = max(articles, key=lambda x: x["score"])
-        best.append(top)  # always include best story per company
+        best.append(top)
     return best
 
 
@@ -247,13 +397,14 @@ def select_best_per_company(all_articles: list[dict]) -> list[dict]:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Skip Reddit/HN API calls; use baseline social scores.")
     args = parser.parse_args()
 
     TMP_DIR.mkdir(exist_ok=True)
     cutoff = datetime.now(timezone.utc) - timedelta(hours=CUTOFF_HOURS)
 
-    companies = get_all_companies()
+    companies    = get_all_companies()
     all_articles = []
 
     print(f"Fetching news for {len(companies)} companies…")
@@ -263,17 +414,33 @@ def main():
         if articles:
             print(f"  {company['ticker']}: {len(articles)} articles")
 
-    print(f"Total: {len(all_articles)} company articles. Scoring with Gemini…")
-    all_articles = score_articles(all_articles, args.dry_run)
-    best = select_best_per_company(all_articles)
+    print(f"Total: {len(all_articles)} company articles.")
+    all_articles = prefilter_articles(all_articles)
+
+    # Social signals
+    reddit_posts = fetch_reddit_posts(args.dry_run)
+    hn_posts     = fetch_hn_posts(args.dry_run)
+
+    # Cluster and score
+    print(f"Clustering {len(all_articles)} articles…")
+    cluster_ids = build_clusters(all_articles)
+    sizes       = _cluster_sizes(cluster_ids)
+    print(f"  {len(set(cluster_ids))} story clusters identified.")
+
+    all_articles = score_popularity(all_articles, reddit_posts, hn_posts, cluster_ids, sizes)
+    best         = select_best_per_company(all_articles)
 
     OUT_FILE.write_text(json.dumps(best, indent=2, ensure_ascii=False))
     print(f"Saved {len(best)} company stories → {OUT_FILE}")
 
     if args.dry_run:
-        print("\n[DRY-RUN] Best company stories (unscored):")
-        for s in best[:10]:
-            print(f"  [Tier {s['tier']}] {s['ticker']}: {s['headline'][:70]}")
+        print("\n[DRY-RUN] Best company stories (popularity-ranked):")
+        for s in sorted(best, key=lambda x: -x["score"])[:10]:
+            pop = s.get("popularity", {})
+            print(
+                f"  [T{s['tier']}] {s['ticker']} score={s['score']} "
+                f"composite={pop.get('composite','?')} | {s['headline'][:70]}"
+            )
 
 
 if __name__ == "__main__":
