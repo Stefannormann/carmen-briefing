@@ -14,7 +14,6 @@ import sys
 from pathlib import Path
 
 import requests
-from pydub import AudioSegment
 
 AUDIO_DIR = Path("audio")
 
@@ -55,18 +54,9 @@ def download_asset(asset: dict) -> bool:
                                 headers={"User-Agent": "CarmenBriefingBot/1.0"})
             resp.raise_for_status()
 
-            raw_path = out_path.with_suffix(".tmp")
-            with raw_path.open("wb") as f:
+            with out_path.open("wb") as f:
                 for chunk in resp.iter_content(chunk_size=8192):
                     f.write(chunk)
-
-            # Normalise to MP3 via pydub (in case format differs)
-            try:
-                audio = AudioSegment.from_file(str(raw_path))
-                audio.export(str(out_path), format="mp3", bitrate="128k")
-                raw_path.unlink()
-            except Exception:
-                raw_path.rename(out_path)  # keep as-is if already MP3
 
             print(f"    → Saved to {out_path}")
             return True
