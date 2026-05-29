@@ -94,7 +94,7 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 8192,
+            "maxOutputTokens": 16384,
         },
     }
     retries = 4
@@ -112,7 +112,14 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
                 time.sleep(wait)
                 continue
             resp.raise_for_status()
-            return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            data      = resp.json()
+            candidate = data["candidates"][0]
+            finish    = candidate.get("finishReason", "UNKNOWN")
+            text      = candidate["content"]["parts"][0]["text"]
+            print(f"  Gemini finishReason: {finish} ({len(text)} chars)")
+            if finish not in ("STOP", "MAX_TOKENS"):
+                print(f"  WARNING: unexpected finishReason '{finish}' — script may be incomplete.")
+            return text
         except requests.exceptions.ReadTimeout:
             if attempt < retries:
                 wait = 15 * attempt
