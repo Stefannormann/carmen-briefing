@@ -14,13 +14,20 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #1a1a2e;
-      --surface:    #16213e;
-      --accent:     #e94560;
-      --gold:       #f5a623;
-      --text:       #e8e8f0;
-      --muted:      #8888a8;
-      --radius:     14px;
+      --bg:       #1a1a2e;
+      --surface:  #16213e;
+      --surface2: #1e2a4a;
+      --accent:   #e94560;
+      --gold:     #f5a623;
+      --text:     #e8e8f0;
+      --muted:    #8888a8;
+      --border:   #2e3460;
+      --radius:   14px;
+      --panel-w:  320px;
+    }
+
+    html, body {
+      height: 100%;
     }
 
     body {
@@ -31,85 +38,136 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 20px);
+      padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 32px);
+      overflow-x: hidden;
     }
 
+    /* ── Header ─────────────────────────────────────────── */
     header {
-      text-align: center;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
       padding: 36px 0 20px;
     }
-    header h1 {
-      font-size: 2.4rem;
+    .header-text h1 {
+      font-size: 2.2rem;
       font-weight: 700;
       letter-spacing: -0.5px;
       color: var(--text);
     }
-    header h1 span { color: var(--accent); }
-    header p {
-      font-size: 0.9rem;
+    .header-text h1 span { color: var(--accent); }
+    .header-text p {
+      font-size: 0.85rem;
       color: var(--muted);
       margin-top: 4px;
     }
+    #settings-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 8px;
+      border-radius: 50%;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    #settings-btn:hover { background: var(--surface2); color: var(--text); }
+    #settings-btn svg { width: 22px; height: 22px; fill: currentColor; }
 
+    /* ── Add-to-Home-Screen banner ──────────────────────── */
+    #a2hs {
+      display: none;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+      color: var(--text);
+      border-left: 3px solid var(--gold);
+    }
+    #a2hs strong { color: var(--gold); }
+    #a2hs button {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; float: right; font-size: 1.1rem; line-height: 1;
+    }
+
+    /* ── Player card ────────────────────────────────────── */
     .player-card {
       background: var(--surface);
       border-radius: var(--radius);
-      padding: 28px 24px;
+      padding: 24px 22px 18px;
       width: 100%;
       max-width: 480px;
-      margin-bottom: 20px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      margin-bottom: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
     }
 
     .episode-title {
       font-size: 1rem;
       font-weight: 600;
       color: var(--gold);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .episode-date {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--muted);
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
+    /* Controls row */
     .controls {
       display: flex;
       align-items: center;
-      gap: 16px;
+      justify-content: center;
+      gap: 18px;
       margin-bottom: 16px;
     }
 
+    .skip-btn {
+      background: none;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      width: 46px; height: 46px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      transition: border-color 0.15s, color 0.15s, transform 0.1s;
+      flex-shrink: 0;
+    }
+    .skip-btn:active { transform: scale(0.90); }
+    .skip-btn:hover { border-color: var(--accent); color: var(--text); }
+    .skip-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
     #play-btn {
-      width: 64px;
-      height: 64px;
+      width: 64px; height: 64px;
       border-radius: 50%;
       background: var(--accent);
       border: none;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
       transition: transform 0.1s, opacity 0.2s;
+      box-shadow: 0 4px 16px rgba(233,69,96,0.4);
     }
-    #play-btn:active { transform: scale(0.94); }
+    #play-btn:active { transform: scale(0.93); }
     #play-btn svg { width: 28px; height: 28px; fill: #fff; }
 
-    .time-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    /* Progress row */
+    .progress-row {
+      margin-bottom: 4px;
     }
-
     #progress {
       -webkit-appearance: none;
       appearance: none;
       width: 100%;
       height: 4px;
       border-radius: 2px;
-      background: #2e2e50;
+      background: var(--border);
       outline: none;
       cursor: pointer;
     }
@@ -118,29 +176,129 @@
       width: 14px; height: 14px;
       border-radius: 50%;
       background: var(--accent);
+      cursor: pointer;
+    }
+    #progress::-moz-range-thumb {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
     }
 
     .timestamps {
       display: flex;
       justify-content: space-between;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       color: var(--muted);
+      margin-bottom: 8px;
     }
 
     .status {
-      font-size: 0.82rem;
+      font-size: 0.80rem;
       color: var(--muted);
-      margin-top: 8px;
       min-height: 18px;
+      margin-bottom: 10px;
     }
 
-    /* Archive list */
+    /* Details toggle */
+    .details-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0 0;
+      border-top: 1px solid var(--border);
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.82rem;
+      user-select: none;
+      transition: color 0.15s;
+    }
+    .details-toggle:hover { color: var(--text); }
+    .details-toggle .chevron {
+      font-size: 1rem;
+      transition: transform 0.25s;
+    }
+    .details-toggle.open .chevron { transform: rotate(90deg); }
+
+    /* ── Episode Details panel ──────────────────────────── */
+    .details-panel {
+      background: var(--surface);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .details-body {
+      padding: 16px 22px 18px;
+      display: none;
+    }
+    .details-body.open { display: block; }
+
+    .details-section { margin-bottom: 16px; }
+    .details-section:last-child { margin-bottom: 0; }
+
+    .details-section h3 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .story-item {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: flex-start;
+    }
+    .story-item:last-child { margin-bottom: 0; }
+    .story-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+    .story-market-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+    .story-text { flex: 1; }
+    .story-headline {
+      font-size: 0.86rem;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .story-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .story-headline a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .story-headline a:hover { color: var(--accent); }
+
+    .details-empty {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ── Archive list ────────────────────────────────────── */
     .archive {
       width: 100%;
       max-width: 480px;
     }
     .archive h2 {
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 1.5px;
       color: var(--muted);
@@ -165,77 +323,282 @@
     .ep-icon {
       width: 36px; height: 36px;
       border-radius: 50%;
-      background: #2e2e50;
+      background: var(--surface2);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
     .ep-icon svg { width: 16px; height: 16px; fill: var(--gold); }
 
     .ep-info { flex: 1; min-width: 0; }
-    .ep-title { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ep-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .ep-title {
+      font-size: 0.9rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ep-meta { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
 
-    /* Add to home screen banner */
-    #a2hs {
+    /* ── Settings overlay + panel ───────────────────────── */
+    #settings-overlay {
       display: none;
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 14px 18px;
-      width: 100%;
-      max-width: 480px;
-      margin-bottom: 20px;
-      font-size: 0.85rem;
-      color: var(--text);
-      border-left: 3px solid var(--gold);
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 90;
+      opacity: 0;
+      transition: opacity 0.25s;
     }
-    #a2hs strong { color: var(--gold); }
-    #a2hs button {
-      background: none; border: none; color: var(--muted);
-      cursor: pointer; float: right; font-size: 1rem; line-height: 1;
+    #settings-overlay.open {
+      display: block;
+      opacity: 1;
     }
 
+    #settings-panel {
+      position: fixed;
+      top: 0; right: 0;
+      width: min(var(--panel-w), 100vw);
+      height: 100%;
+      background: var(--surface);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+      padding-bottom: env(safe-area-inset-bottom, 24px);
+    }
+    #settings-panel.open {
+      transform: translateX(0);
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+    .settings-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .settings-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.4rem;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .settings-close:hover { background: var(--surface2); color: var(--text); }
+
+    .settings-body {
+      padding: 8px 0;
+      flex: 1;
+    }
+
+    /* Accordion */
+    .accordion-item {
+      border-bottom: 1px solid var(--border);
+    }
+    .accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 500;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .accordion-header:hover { background: var(--surface2); }
+    .accordion-header .acc-chevron {
+      color: var(--muted);
+      font-size: 1rem;
+      transition: transform 0.22s;
+    }
+    .accordion-header.open .acc-chevron { transform: rotate(90deg); }
+
+    .accordion-content {
+      display: none;
+      padding: 0 20px 16px;
+    }
+    .accordion-content.open { display: block; }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+    .setting-label {
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    .setting-desc {
+      font-size: 0.80rem;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* Toggle switch */
+    .toggle-switch {
+      position: relative;
+      width: 44px; height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; bottom: 3px;
+      background: var(--muted);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+      background: #fff;
+    }
+
+    #biometric-enroll-btn {
+      display: none;
+      margin-top: 10px;
+      width: 100%;
+      padding: 9px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    #biometric-enroll-btn:active { opacity: 0.8; }
+
+    #biometric-status {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── Footer ─────────────────────────────────────────── */
     footer {
       margin-top: auto;
       padding-top: 28px;
-      font-size: 0.75rem;
+      font-size: 0.73rem;
       color: var(--muted);
       text-align: center;
+      width: 100%;
+      max-width: 480px;
     }
   </style>
 </head>
 <body>
 
+<!-- ── Header ──────────────────────────────────────────────── -->
 <header>
-  <h1>Carmen <span>Briefing</span></h1>
-  <p id="header-date">Loading…</p>
+  <div class="header-text">
+    <h1>Carmen <span>Briefing</span></h1>
+    <p id="header-date">Loading…</p>
+  </div>
+  <button id="settings-btn" aria-label="Settings" onclick="openSettings()">
+    <!-- Cogwheel icon -->
+    <svg viewBox="0 0 24 24">
+      <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.41l-.36 2.54a7.1 7.1 0 0 0-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.64 8.47a.47.47 0 0 0 .12.61l2.03 1.58c-.04.3-.07.62-.07.94s.03.64.07.94l-2.03 1.58a.47.47 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.36 1.04.67 1.62.94l.36 2.54c.05.24.27.41.48.41h4c.24 0 .44-.17.48-.41l.36-2.54a7.1 7.1 0 0 0 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.03-1.58zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/>
+    </svg>
+  </button>
 </header>
 
+<!-- ── Add-to-Home-Screen banner ──────────────────────────────── -->
 <div id="a2hs">
-  <button onclick="document.getElementById('a2hs').style.display='none'" aria-label="Dismiss">×</button>
+  <button onclick="dismissA2hs()" aria-label="Dismiss">×</button>
   <strong>Add to Home Screen</strong> — tap the Share button in Safari, then
   "Add to Home Screen" for one-tap access every morning.
 </div>
 
-<div class="player-card" id="player-card">
+<!-- ── Player card ──────────────────────────────────────────── -->
+<div class="player-card">
   <div class="episode-title" id="ep-title">Loading episode…</div>
   <div class="episode-date" id="ep-date"></div>
 
   <div class="controls">
+    <!-- Skip back 15s -->
+    <button class="skip-btn" id="skip-back-btn" aria-label="Skip back 15 seconds" onclick="skipAudio(-15)">
+      <svg viewBox="0 0 24 24">
+        <path d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+        <text x="7.5" y="14.5" font-size="5.5" fill="currentColor" font-family="sans-serif" font-weight="700">15</text>
+      </svg>
+    </button>
+
+    <!-- Play / Pause -->
     <button id="play-btn" aria-label="Play / Pause">
       <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
       <svg id="icon-pause" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
     </button>
-    <div class="time-info">
-      <input type="range" id="progress" value="0" min="0" max="100" step="0.1" />
-      <div class="timestamps">
-        <span id="time-current">0:00</span>
-        <span id="time-total">--:--</span>
-      </div>
-    </div>
+
+    <!-- Skip forward 15s -->
+    <button class="skip-btn" id="skip-fwd-btn" aria-label="Skip forward 15 seconds" onclick="skipAudio(15)">
+      <svg viewBox="0 0 24 24">
+        <path d="M12.01 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/>
+        <text x="7.5" y="14.5" font-size="5.5" fill="currentColor" font-family="sans-serif" font-weight="700">15</text>
+      </svg>
+    </button>
   </div>
+
+  <div class="progress-row">
+    <input type="range" id="progress" value="0" min="0" max="100" step="0.1" aria-label="Seek" />
+  </div>
+  <div class="timestamps">
+    <span id="time-current">0:00</span>
+    <span id="time-total">--:--</span>
+  </div>
+
   <div class="status" id="status">Select an episode below</div>
+
+  <div class="details-toggle" id="details-toggle" role="button" tabindex="0"
+       onclick="toggleDetails()" onkeydown="if(event.key==='Enter')toggleDetails()">
+    <span>Today's Stories</span>
+    <span class="chevron">›</span>
+  </div>
 </div>
 
+<!-- ── Episode Details panel ─────────────────────────────────── -->
+<div class="details-panel" id="details-panel">
+  <div class="details-body" id="details-body">
+    <div id="details-loading" class="details-empty">Loading details…</div>
+
+    <div id="details-geo" class="details-section" style="display:none">
+      <h3>World News</h3>
+      <div id="details-geo-list"></div>
+    </div>
+
+    <div id="details-markets" class="details-section" style="display:none">
+      <h3>Markets</h3>
+      <div id="details-markets-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Archive list ──────────────────────────────────────────── -->
 <div class="archive">
   <h2>Recent Episodes</h2>
   <div id="ep-list">Loading…</div>
@@ -245,155 +608,511 @@
 
 <audio id="audio"></audio>
 
-<script>
-  const audio = document.getElementById('audio');
-  const playBtn = document.getElementById('play-btn');
-  const iconPlay = document.getElementById('icon-play');
-  const iconPause = document.getElementById('icon-pause');
-  const progress = document.getElementById('progress');
-  const timeCurrent = document.getElementById('time-current');
-  const timeTotal = document.getElementById('time-total');
-  const statusEl = document.getElementById('status');
-  const epTitle = document.getElementById('ep-title');
-  const epDate = document.getElementById('ep-date');
-  const headerDate = document.getElementById('header-date');
-  const epList = document.getElementById('ep-list');
+<!-- ── Settings overlay + panel ──────────────────────────────── -->
+<div id="settings-overlay" onclick="closeSettings()"></div>
 
-  let episodes = [];
-  let activeIndex = -1;
+<div id="settings-panel" role="dialog" aria-label="Settings" aria-modal="true">
+  <div class="settings-header">
+    <h2>⚙ Settings</h2>
+    <button class="settings-close" onclick="closeSettings()" aria-label="Close settings">×</button>
+  </div>
+  <div class="settings-body">
 
-  function fmt(secs) {
-    const s = Math.floor(secs);
-    return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
-  }
-
-  function setPlaying(playing) {
-    iconPlay.style.display = playing ? 'none' : '';
-    iconPause.style.display = playing ? '' : 'none';
-  }
-
-  playBtn.addEventListener('click', () => {
-    if (!audio.src) return;
-    audio.paused ? audio.play() : audio.pause();
-  });
-
-  audio.addEventListener('play', () => setPlaying(true));
-  audio.addEventListener('pause', () => setPlaying(false));
-  audio.addEventListener('ended', () => setPlaying(false));
-
-  audio.addEventListener('timeupdate', () => {
-    if (!audio.duration) return;
-    const pct = (audio.currentTime / audio.duration) * 100;
-    progress.value = pct;
-    timeCurrent.textContent = fmt(audio.currentTime);
-  });
-
-  audio.addEventListener('loadedmetadata', () => {
-    timeTotal.textContent = fmt(audio.duration);
-    progress.max = 100;
-  });
-
-  audio.addEventListener('waiting', () => statusEl.textContent = 'Buffering…');
-  audio.addEventListener('playing', () => statusEl.textContent = 'Playing');
-  audio.addEventListener('error', () => statusEl.textContent = 'Playback error — check connection.');
-
-  progress.addEventListener('input', () => {
-    if (audio.duration) {
-      audio.currentTime = (progress.value / 100) * audio.duration;
-    }
-  });
-
-  function loadEpisode(index) {
-    const ep = episodes[index];
-    if (!ep) return;
-    activeIndex = index;
-
-    epTitle.textContent = ep.title;
-    epDate.textContent = new Date(ep.date + 'T00:00:00').toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-    statusEl.textContent = 'Ready';
-    timeCurrent.textContent = '0:00';
-    timeTotal.textContent = ep.duration_seconds ? fmt(ep.duration_seconds) : '--:--';
-    progress.value = 0;
-
-    audio.src = `../episodes/${ep.filename}`;
-    audio.load();
-    audio.play().catch(() => statusEl.textContent = 'Tap play to start');
-
-    // Update active state in list
-    document.querySelectorAll('.ep-item').forEach((el, i) => {
-      el.classList.toggle('active', i === index);
-    });
-  }
-
-  function renderList() {
-    if (!episodes.length) {
-      epList.innerHTML = '<p style="color:var(--muted);font-size:.85rem">No episodes yet.</p>';
-      return;
-    }
-    epList.innerHTML = episodes.map((ep, i) => `
-      <div class="ep-item${i === activeIndex ? ' active' : ''}" onclick="loadEpisode(${i})">
-        <div class="ep-icon">
-          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    <!-- Security accordion -->
+    <div class="accordion-item">
+      <div class="accordion-header" id="acc-security" onclick="toggleAccordion('security')" role="button" tabindex="0">
+        <span>🔒 Security</span>
+        <span class="acc-chevron">›</span>
+      </div>
+      <div class="accordion-content" id="acc-content-security">
+        <div class="setting-row">
+          <span class="setting-label">Biometric Lock</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="biometric-toggle" onchange="handleBiometricToggle(this)" />
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        <div class="ep-info">
-          <div class="ep-title">${ep.title}</div>
-          <div class="ep-meta">${ep.duration_seconds ? fmt(ep.duration_seconds) : ''}</div>
+        <p id="biometric-status" class="setting-desc">Require fingerprint / Face ID to open Settings.</p>
+        <button id="biometric-enroll-btn" onclick="enrollBiometric()">Enroll Biometric</button>
+      </div>
+    </div>
+
+    <!-- About accordion -->
+    <div class="accordion-item">
+      <div class="accordion-header" id="acc-about" onclick="toggleAccordion('about')" role="button" tabindex="0">
+        <span>ℹ About</span>
+        <span class="acc-chevron">›</span>
+      </div>
+      <div class="accordion-content" id="acc-content-about">
+        <p class="setting-desc" style="padding-top:4px">Carmen Briefing v2.0</p>
+        <p class="setting-desc" style="margin-top:8px">Generated daily at 06:00 · Powered by Gemini 2.5 Flash &amp; Microsoft Edge TTS</p>
+        <p class="setting-desc" style="margin-top:8px">
+          Audio attribution: jingle by plasterbrain (CC0) · transition by Khrinx (CC0)
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ── State ───────────────────────────────────────────────────── */
+const audio       = document.getElementById('audio');
+const playBtn     = document.getElementById('play-btn');
+const iconPlay    = document.getElementById('icon-play');
+const iconPause   = document.getElementById('icon-pause');
+const progress    = document.getElementById('progress');
+const timeCurrent = document.getElementById('time-current');
+const timeTotal   = document.getElementById('time-total');
+const statusEl    = document.getElementById('status');
+const epTitle     = document.getElementById('ep-title');
+const epDate      = document.getElementById('ep-date');
+const headerDate  = document.getElementById('header-date');
+const epList      = document.getElementById('ep-list');
+
+let episodes    = [];
+let activeIndex = -1;
+let detailsOpen = false;
+let currentMetadata = null;
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+function fmt(secs) {
+  const s = Math.floor(secs);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function setPlaying(playing) {
+  iconPlay.style.display  = playing ? 'none' : '';
+  iconPause.style.display = playing ? ''     : 'none';
+}
+
+/* ── Audio controls ──────────────────────────────────────────── */
+playBtn.addEventListener('click', () => {
+  if (!audio.src) return;
+  audio.paused ? audio.play() : audio.pause();
+});
+
+function skipAudio(seconds) {
+  if (!audio.src || !audio.duration) return;
+  audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + seconds));
+}
+
+audio.addEventListener('play',  () => setPlaying(true));
+audio.addEventListener('pause', () => setPlaying(false));
+audio.addEventListener('ended', () => setPlaying(false));
+
+audio.addEventListener('timeupdate', () => {
+  if (!audio.duration) return;
+  progress.value = (audio.currentTime / audio.duration) * 100;
+  timeCurrent.textContent = fmt(audio.currentTime);
+});
+
+audio.addEventListener('loadedmetadata', () => {
+  timeTotal.textContent = fmt(audio.duration);
+});
+
+audio.addEventListener('waiting', () => { statusEl.textContent = 'Buffering…'; });
+audio.addEventListener('playing', () => { statusEl.textContent = 'Playing'; });
+audio.addEventListener('error',   () => { statusEl.textContent = 'Playback error — check connection.'; });
+
+progress.addEventListener('input', () => {
+  if (audio.duration) audio.currentTime = (progress.value / 100) * audio.duration;
+});
+
+/* ── Episode loading ─────────────────────────────────────────── */
+function loadEpisode(index) {
+  const ep = episodes[index];
+  if (!ep) return;
+  activeIndex = index;
+  currentMetadata = null;
+
+  epTitle.textContent = ep.title;
+  epDate.textContent  = new Date(ep.date + 'T00:00:00').toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  statusEl.textContent     = 'Ready';
+  timeCurrent.textContent  = '0:00';
+  timeTotal.textContent    = ep.duration_seconds ? fmt(ep.duration_seconds) : '--:--';
+  progress.value           = 0;
+
+  audio.src = `../episodes/${ep.filename}`;
+  audio.load();
+  audio.play().catch(() => { statusEl.textContent = 'Tap play to start'; });
+
+  document.querySelectorAll('.ep-item').forEach((el, i) => {
+    el.classList.toggle('active', i === index);
+  });
+
+  // Refresh details panel if open
+  if (detailsOpen) loadDetails(ep);
+}
+
+/* ── Episode Details ─────────────────────────────────────────── */
+function toggleDetails() {
+  detailsOpen = !detailsOpen;
+  const toggle = document.getElementById('details-toggle');
+  const body   = document.getElementById('details-body');
+  toggle.classList.toggle('open', detailsOpen);
+  body.classList.toggle('open', detailsOpen);
+
+  if (detailsOpen && episodes[activeIndex]) {
+    loadDetails(episodes[activeIndex]);
+  }
+}
+
+async function loadDetails(ep) {
+  if (!ep || !ep.metadata) {
+    showDetailsEmpty('No story details available for this episode.');
+    return;
+  }
+
+  // Return cached metadata if already loaded for this episode
+  if (currentMetadata && currentMetadata.date === ep.date) {
+    renderDetails(currentMetadata);
+    return;
+  }
+
+  document.getElementById('details-loading').style.display = '';
+  document.getElementById('details-geo').style.display     = 'none';
+  document.getElementById('details-markets').style.display = 'none';
+
+  try {
+    const resp = await fetch(`../episodes/${ep.metadata}?v=${Date.now()}`);
+    if (!resp.ok) throw new Error('not found');
+    currentMetadata = await resp.json();
+    renderDetails(currentMetadata);
+  } catch {
+    showDetailsEmpty('Could not load episode details.');
+  }
+}
+
+function showDetailsEmpty(msg) {
+  document.getElementById('details-loading').textContent    = msg;
+  document.getElementById('details-loading').style.display  = '';
+  document.getElementById('details-geo').style.display      = 'none';
+  document.getElementById('details-markets').style.display  = 'none';
+}
+
+function renderDetails(meta) {
+  document.getElementById('details-loading').style.display = 'none';
+
+  const geo     = (meta.geo_stories     || []);
+  const markets = (meta.market_stories  || []);
+
+  // Geo section
+  const geoEl = document.getElementById('details-geo');
+  if (geo.length) {
+    document.getElementById('details-geo-list').innerHTML = geo.map(s => `
+      <div class="story-item">
+        <div class="story-dot"></div>
+        <div class="story-text">
+          <div class="story-headline">
+            ${s.source_url
+              ? `<a href="${escHtml(s.source_url)}" target="_blank" rel="noopener">${escHtml(s.headline)}</a>`
+              : escHtml(s.headline)}
+          </div>
+          ${s.topic && s.topic.length
+            ? `<div class="story-meta">${s.topic.map(t => topicLabel(t)).join(' · ')}</div>`
+            : ''}
         </div>
       </div>
     `).join('');
+    geoEl.style.display = '';
+  } else {
+    geoEl.style.display = 'none';
   }
 
-  async function init() {
-    // Show today's date in header
-    headerDate.textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  // Markets section
+  const mkEl = document.getElementById('details-markets');
+  if (markets.length) {
+    document.getElementById('details-markets-list').innerHTML = markets.map(s => `
+      <div class="story-item">
+        <div class="story-market-dot"></div>
+        <div class="story-text">
+          <div class="story-headline">
+            ${s.source_url
+              ? `<a href="${escHtml(s.source_url)}" target="_blank" rel="noopener">${escHtml(s.headline)}</a>`
+              : escHtml(s.headline)}
+          </div>
+          <div class="story-meta">${s.name || s.ticker || ''}</div>
+        </div>
+      </div>
+    `).join('');
+    mkEl.style.display = '';
+  } else {
+    mkEl.style.display = 'none';
+  }
 
-    // Add-to-home-screen prompt (Safari only, standalone check)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    const dismissed = localStorage.getItem('a2hs_dismissed');
-    if (!isStandalone && isSafari && !dismissed) {
-      document.getElementById('a2hs').style.display = 'block';
-      document.querySelector('#a2hs button').addEventListener('click', () => {
-        localStorage.setItem('a2hs_dismissed', '1');
-      });
+  if (!geo.length && !markets.length) {
+    showDetailsEmpty('No stories recorded for this episode.');
+  }
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+const TOPIC_LABELS = {
+  usa_china:    'US–China',
+  usa_europe:   'US–Europe',
+  tech_ai:      'Tech & AI',
+  usa_denmark:  'US–Denmark',
+  europe_china: 'Europe–China',
+  supply_chain: 'Supply Chain',
+  energy_geo:   'Energy',
+  other:        'World',
+};
+function topicLabel(t) { return TOPIC_LABELS[t] || t; }
+
+/* ── Archive list ────────────────────────────────────────────── */
+function renderList() {
+  if (!episodes.length) {
+    epList.innerHTML = '<p style="color:var(--muted);font-size:.85rem">No episodes yet.</p>';
+    return;
+  }
+  epList.innerHTML = episodes.map((ep, i) => `
+    <div class="ep-item${i === activeIndex ? ' active' : ''}" onclick="loadEpisode(${i})">
+      <div class="ep-icon">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      <div class="ep-info">
+        <div class="ep-title">${escHtml(ep.title)}</div>
+        <div class="ep-meta">${ep.duration_seconds ? fmt(ep.duration_seconds) : ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ── Settings panel ──────────────────────────────────────────── */
+let settingsOpen = false;
+
+async function openSettings() {
+  const biometricEnabled = localStorage.getItem('carmen_biometric_enabled') === '1';
+  if (biometricEnabled) {
+    const ok = await webauthnVerify();
+    if (!ok) return; // biometric denied / cancelled — don't open
+  }
+  _showSettings();
+}
+
+function _showSettings() {
+  settingsOpen = true;
+  document.getElementById('settings-overlay').classList.add('open');
+  document.getElementById('settings-panel').classList.add('open');
+  syncBiometricUI();
+}
+
+function closeSettings() {
+  settingsOpen = false;
+  document.getElementById('settings-overlay').classList.remove('open');
+  document.getElementById('settings-panel').classList.remove('open');
+}
+
+/* ── Accordion ───────────────────────────────────────────────── */
+function toggleAccordion(id) {
+  const header  = document.getElementById(`acc-${id}`);
+  const content = document.getElementById(`acc-content-${id}`);
+  const isOpen  = content.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('open'));
+  document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('open'));
+  // Open this one (unless it was already open)
+  if (!isOpen) {
+    header.classList.add('open');
+    content.classList.add('open');
+  }
+}
+
+/* ── WebAuthn biometric ──────────────────────────────────────── */
+function _supportsWebAuthn() {
+  return window.PublicKeyCredential !== undefined
+    && navigator.credentials !== undefined;
+}
+
+function syncBiometricUI() {
+  const enabled    = localStorage.getItem('carmen_biometric_enabled') === '1';
+  const credId     = localStorage.getItem('carmen_biometric_cred');
+  const toggle     = document.getElementById('biometric-toggle');
+  const enrollBtn  = document.getElementById('biometric-enroll-btn');
+  const statusMsg  = document.getElementById('biometric-status');
+
+  if (!_supportsWebAuthn()) {
+    toggle.disabled  = true;
+    statusMsg.textContent = 'Biometric authentication is not supported on this device.';
+    enrollBtn.style.display = 'none';
+    return;
+  }
+
+  toggle.checked = enabled;
+
+  if (enabled && credId) {
+    statusMsg.textContent = 'Biometric lock is active. Settings will require authentication to open.';
+    enrollBtn.style.display = 'none';
+  } else if (enabled && !credId) {
+    statusMsg.textContent = 'Biometric enabled but not yet enrolled — tap below to register.';
+    enrollBtn.style.display = 'block';
+    enrollBtn.textContent   = 'Enroll Biometric';
+  } else {
+    statusMsg.textContent = 'Require fingerprint / Face ID to open Settings.';
+    enrollBtn.style.display = 'none';
+  }
+}
+
+function handleBiometricToggle(checkbox) {
+  if (checkbox.checked) {
+    // Show enroll button — actual enrollment happens on button tap
+    localStorage.setItem('carmen_biometric_enabled', '1');
+    document.getElementById('biometric-enroll-btn').style.display = 'block';
+    document.getElementById('biometric-status').textContent = 'Tap below to register your biometric.';
+  } else {
+    // Disable — clear stored credential
+    localStorage.removeItem('carmen_biometric_enabled');
+    localStorage.removeItem('carmen_biometric_cred');
+    syncBiometricUI();
+  }
+}
+
+function _b64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function _fromB64url(str) {
+  const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+}
+
+async function enrollBiometric() {
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const userId    = crypto.getRandomValues(new Uint8Array(16));
+
+  try {
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: {
+          id:   window.location.hostname,
+          name: 'Carmen Briefing',
+        },
+        user: {
+          id:          userId,
+          name:        'carmen-user',
+          displayName: 'Carmen User',
+        },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7  }, // ES256
+          { type: 'public-key', alg: -257 }, // RS256 fallback
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          requireResidentKey:      false,
+          userVerification:        'required',
+        },
+        timeout: 60000,
+      },
+    });
+
+    localStorage.setItem('carmen_biometric_cred', _b64url(cred.rawId));
+    localStorage.setItem('carmen_biometric_enabled', '1');
+    document.getElementById('biometric-status').textContent = 'Biometric enrolled successfully! ✓';
+    document.getElementById('biometric-enroll-btn').style.display = 'none';
+    setTimeout(syncBiometricUI, 1500);
+  } catch (e) {
+    document.getElementById('biometric-status').textContent =
+      e.name === 'NotAllowedError'
+        ? 'Enrollment cancelled.'
+        : `Enrollment failed: ${e.message}`;
+  }
+}
+
+async function webauthnVerify() {
+  const credId = localStorage.getItem('carmen_biometric_cred');
+  if (!credId) return true; // no credential stored yet — allow through
+
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+
+  try {
+    await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{
+          type: 'public-key',
+          id:   _fromB64url(credId),
+        }],
+        userVerification: 'required',
+        timeout:           60000,
+      },
+    });
+    return true;
+  } catch (e) {
+    if (e.name !== 'NotAllowedError') {
+      console.warn('WebAuthn verify:', e.name, e.message);
     }
+    return false;
+  }
+}
 
-    // Load episode index
-    try {
-      const resp = await fetch('../episodes/index.json?v=' + Date.now());
-      if (!resp.ok) throw new Error('No index');
-      episodes = await resp.json();
-    } catch {
-      epList.innerHTML = '<p style="color:var(--muted);font-size:.85rem">No episodes available yet — check back after the first scheduled run.</p>';
-      epTitle.textContent = 'No episodes yet';
-      return;
-    }
+/* ── Add-to-Home-Screen ──────────────────────────────────────── */
+function dismissA2hs() {
+  localStorage.setItem('a2hs_dismissed', '1');
+  document.getElementById('a2hs').style.display = 'none';
+}
 
+/* ── Initialise ──────────────────────────────────────────────── */
+async function init() {
+  headerDate.textContent = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+
+  // A2HS prompt (Safari only)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const isSafari     = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+  const dismissed    = localStorage.getItem('a2hs_dismissed');
+  if (!isStandalone && isSafari && !dismissed) {
+    document.getElementById('a2hs').style.display = 'block';
+  }
+
+  // Load episode index
+  try {
+    const resp = await fetch('../episodes/index.json?v=' + Date.now());
+    if (!resp.ok) throw new Error('no index');
+    episodes = await resp.json();
+  } catch {
+    epList.innerHTML = '<p style="color:var(--muted);font-size:.85rem">No episodes available yet — check back after the first scheduled run.</p>';
+    epTitle.textContent = 'No episodes yet';
+    return;
+  }
+
+  renderList();
+
+  if (episodes.length) {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayIdx = episodes.findIndex(e => e.date === todayStr);
+    const startIdx = todayIdx >= 0 ? todayIdx : 0;
+    const ep       = episodes[startIdx];
+
+    epTitle.textContent = ep.title;
+    epDate.textContent  = new Date(ep.date + 'T00:00:00').toLocaleDateString('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+    if (ep.duration_seconds) timeTotal.textContent = fmt(ep.duration_seconds);
+    statusEl.textContent = 'Tap play to listen';
+    audio.src   = `../episodes/${ep.filename}`;
+    activeIndex = startIdx;
     renderList();
-
-    if (episodes.length) {
-      // Auto-select today's or latest episode
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const todayIdx = episodes.findIndex(e => e.date === todayStr);
-      const startIdx = todayIdx >= 0 ? todayIdx : 0;
-      epTitle.textContent = episodes[startIdx].title;
-      epDate.textContent = new Date(episodes[startIdx].date + 'T00:00:00').toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-      if (episodes[startIdx].duration_seconds) {
-        timeTotal.textContent = fmt(episodes[startIdx].duration_seconds);
-      }
-      statusEl.textContent = 'Tap play to listen';
-      audio.src = `../episodes/${episodes[startIdx].filename}`;
-      activeIndex = startIdx;
-      renderList();
-    }
   }
 
-  init();
-
-  // Register service worker for offline caching
+  // Service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
+}
+
+init();
 </script>
 </body>
 </html>

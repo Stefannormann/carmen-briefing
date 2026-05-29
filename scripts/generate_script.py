@@ -24,10 +24,11 @@ GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
 TMP_DIR = Path("tmp")
-SCRIPT_FILE = TMP_DIR / "script.txt"
-SEGMENTS_FILE = TMP_DIR / "segments.json"
-GEO_FILE = TMP_DIR / "geo_stories.json"
-MARKET_FILE = TMP_DIR / "market_stories.json"
+SCRIPT_FILE    = TMP_DIR / "script.txt"
+SEGMENTS_FILE  = TMP_DIR / "segments.json"
+GEO_FILE       = TMP_DIR / "geo_stories.json"
+MARKET_FILE    = TMP_DIR / "market_stories.json"
+METADATA_FILE  = TMP_DIR / "episode_metadata.json"
 
 TRANSITION_MARKER = "---TRANSITION---"
 
@@ -169,6 +170,37 @@ def main():
 
     SCRIPT_FILE.write_text(script, encoding="utf-8")
     print(f"Script saved → {SCRIPT_FILE} ({len(script)} chars)")
+
+    # Save episode metadata sidecar for the PWA Episode Details module
+    metadata = {
+        "date": date.today().isoformat(),
+        "geo_stories": [
+            {
+                "headline":        s.get("headline", ""),
+                "summary_snippet": s.get("summary_snippet", ""),
+                "source_url":      s.get("source_url", ""),
+                "topic":           s.get("topic", []),
+                "score":           s.get("score", 5),
+                "watchlist_flag":  s.get("watchlist_flag", False),
+                "watchlist_note":  s.get("watchlist_note", ""),
+            }
+            for s in geo_stories
+        ],
+        "market_stories": [
+            {
+                "headline":        s.get("headline", ""),
+                "summary_snippet": s.get("summary_snippet", ""),
+                "source_url":      s.get("source_url", ""),
+                "ticker":          s.get("ticker", ""),
+                "name":            s.get("name", ""),
+                "tier":            s.get("tier", 3),
+                "score":           s.get("score", 5),
+            }
+            for s in market_stories
+        ],
+    }
+    METADATA_FILE.write_text(json.dumps(metadata, indent=2, ensure_ascii=False))
+    print(f"Episode metadata saved → {METADATA_FILE}")
 
     # Split on transition markers
     segments = [s.strip() for s in script.split(TRANSITION_MARKER) if s.strip()]

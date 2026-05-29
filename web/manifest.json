@@ -2,7 +2,7 @@
   "name": "Carmen Briefing",
   "short_name": "Carmen",
   "description": "Your daily personalised audio news briefing.",
-  "start_url": "/web/index.html",
+  "start_url": "https://carmen.stefannormann.com/web/index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#1a1a2e",

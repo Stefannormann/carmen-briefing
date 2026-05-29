@@ -1,7 +1,13 @@
 """
 Stock watchlist with tier assignments and prioritisation logic.
-Edit the WATCHLIST dict below to add/remove companies or change tiers.
+
+Companies are loaded from filters.json if present (runtime config editable
+via the REST API), otherwise fall back to the WATCHLIST constant below.
+Edit WATCHLIST to change the hardcoded defaults / re-run create_filters_json.py.
 """
+
+import json
+from pathlib import Path
 
 WATCHLIST = {
     "tier1": [
@@ -51,10 +57,35 @@ WATCHLIST = {
     ],
 }
 
+_FILTERS_CANDIDATES = [
+    Path("filters.json"),
+    Path("/opt/carmen/filters.json"),
+]
+
+
+def _load_filters_companies() -> dict | None:
+    """Return companies dict from filters.json if available, else None."""
+    for path in _FILTERS_CANDIDATES:
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                companies = data.get("companies")
+                if companies and all(k in companies for k in ("tier1", "tier2", "tier3")):
+                    return companies
+            except Exception:
+                pass
+    return None
+
+
+def _active_watchlist() -> dict:
+    """Return active company dict (filters.json preferred, hardcoded fallback)."""
+    return _load_filters_companies() or WATCHLIST
+
+
 # Flat list of all companies with tier annotation, in priority order
 def get_all_companies():
     result = []
-    for tier_name, companies in WATCHLIST.items():
+    for tier_name, companies in _active_watchlist().items():
         tier_num = int(tier_name.replace("tier", ""))
         for c in companies:
             result.append({**c, "tier": tier_num})

@@ -1,5 +1,6 @@
 """
-Keep only the 3 most recent episodes and update episodes/index.json.
+Keep only the 3 most recent episodes, write per-episode JSON sidecars,
+and update episodes/index.json.
 
 Usage:
     python scripts/manage_archive.py
@@ -12,9 +13,11 @@ from pathlib import Path
 
 from mutagen.mp3 import MP3
 
-EPISODES_DIR = Path("episodes")
-INDEX_FILE = EPISODES_DIR / "index.json"
-MAX_EPISODES = 3
+EPISODES_DIR  = Path("episodes")
+INDEX_FILE    = EPISODES_DIR / "index.json"
+TMP_DIR       = Path("tmp")
+METADATA_FILE = TMP_DIR / "episode_metadata.json"
+MAX_EPISODES  = 3
 
 
 def episode_duration(path: Path) -> int:
@@ -35,6 +38,61 @@ def format_title(filename: str) -> str:
         return f"Carmen's Briefing — {filename}"
 
 
+def _load_tmp_metadata() -> dict | None:
+    """Load the metadata written by generate_script.py, if present."""
+    if not METADATA_FILE.exists():
+        return None
+    try:
+        return json.loads(METADATA_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _write_sidecar(ep_stem: str, duration: int, title: str, tmp_meta: dict | None):
+    """Write episodes/YYYY-MM-DD.json sidecar if not already present."""
+    sidecar_path = EPISODES_DIR / f"{ep_stem}.json"
+    if sidecar_path.exists():
+        # Update duration in existing sidecar if it's 0
+        try:
+            existing = json.loads(sidecar_path.read_text(encoding="utf-8"))
+            if existing.get("duration_seconds", 0) == 0 and duration > 0:
+                existing["duration_seconds"] = duration
+                sidecar_path.write_text(
+                    json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8"
+                )
+                print(f"  Updated duration in sidecar → {sidecar_path.name}")
+        except Exception:
+            pass
+        return
+
+    # Build sidecar from today's tmp metadata (only matches same date)
+    if tmp_meta and tmp_meta.get("date") == ep_stem:
+        sidecar = {
+            "date":             ep_stem,
+            "title":            title,
+            "duration_seconds": duration,
+            "geo_stories":      tmp_meta.get("geo_stories", []),
+            "market_stories":   tmp_meta.get("market_stories", []),
+        }
+        sidecar_path.write_text(
+            json.dumps(sidecar, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        print(f"  Wrote sidecar → {sidecar_path.name}")
+    else:
+        # Create a minimal sidecar so the PWA knows the file exists
+        sidecar = {
+            "date":             ep_stem,
+            "title":            title,
+            "duration_seconds": duration,
+            "geo_stories":      [],
+            "market_stories":   [],
+        }
+        sidecar_path.write_text(
+            json.dumps(sidecar, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        print(f"  Wrote minimal sidecar → {sidecar_path.name} (no tmp metadata matched)")
+
+
 def main():
     EPISODES_DIR.mkdir(exist_ok=True)
 
@@ -44,30 +102,44 @@ def main():
         reverse=True,
     )
 
-    # Delete oldest episodes beyond the limit
+    # Delete oldest episodes and their sidecars beyond the limit
     to_delete = mp3_files[MAX_EPISODES:]
     for old_file in to_delete:
         print(f"Removing old episode: {old_file.name}")
         old_file.unlink()
+        old_sidecar = EPISODES_DIR / f"{old_file.stem}.json"
+        if old_sidecar.exists():
+            old_sidecar.unlink()
+            print(f"  Removed old sidecar: {old_sidecar.name}")
+
+    # Load tmp metadata once (written by generate_script.py today)
+    tmp_meta = _load_tmp_metadata()
 
     # Remaining episodes
     current = sorted(EPISODES_DIR.glob("*.mp3"), key=lambda p: p.name, reverse=True)
 
     index = []
     for ep in current:
-        entry_date = ep.stem  # e.g. "2025-01-15"
+        ep_stem  = ep.stem          # e.g. "2025-01-15"
         duration = episode_duration(ep)
+        title    = format_title(ep.name)
+
+        _write_sidecar(ep_stem, duration, title, tmp_meta)
+
+        sidecar_path = EPISODES_DIR / f"{ep_stem}.json"
         index.append({
-            "date": entry_date,
-            "filename": ep.name,
-            "title": format_title(ep.name),
+            "date":             ep_stem,
+            "filename":         ep.name,
+            "title":            title,
             "duration_seconds": duration,
+            "metadata":         f"{ep_stem}.json" if sidecar_path.exists() else None,
         })
 
     INDEX_FILE.write_text(json.dumps(index, indent=2, ensure_ascii=False))
     print(f"Archive index updated: {len(index)} episodes in {INDEX_FILE}")
     for ep in index:
-        print(f"  {ep['date']} — {ep['duration_seconds']}s — {ep['title']}")
+        meta_flag = "✓" if ep["metadata"] else "—"
+        print(f"  {ep['date']} — {ep['duration_seconds']}s — {meta_flag} — {ep['title']}")
 
 
 if __name__ == "__main__":

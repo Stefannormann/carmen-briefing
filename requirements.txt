@@ -8,3 +8,5 @@ google-generativeai
 mutagen
 Pillow
 scikit-learn
+flask
+gunicorn

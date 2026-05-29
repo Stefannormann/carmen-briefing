@@ -34,6 +34,33 @@ from config.geo_keywords import GEO_KEYWORDS
 from config.publisher_authority import get_authority
 from scripts.watchlist import get_all_names
 
+# ── filters.json runtime overrides ───────────────────────────────────────────
+_FILTERS_CANDIDATES = [Path("filters.json"), Path("/opt/carmen/filters.json")]
+
+def _load_filters() -> dict | None:
+    for p in _FILTERS_CANDIDATES:
+        if p.exists():
+            try:
+                return json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+    return None
+
+def _get_sources() -> tuple[list[str], list[str]]:
+    """Return (tier1_feeds, tier2_feeds) from filters.json or hardcoded defaults."""
+    f = _load_filters()
+    if f and "geo_sources" in f:
+        sources = f["geo_sources"]
+        return sources.get("tier1", GEO_RSS_TIER_1), sources.get("tier2", GEO_RSS_TIER_2)
+    return GEO_RSS_TIER_1, GEO_RSS_TIER_2
+
+def _get_keywords() -> dict:
+    """Return keyword dict from filters.json or hardcoded defaults."""
+    f = _load_filters()
+    if f and "geo_keywords" in f:
+        return f["geo_keywords"]
+    return GEO_KEYWORDS
+
 # ── Reddit subreddits for geo news ────────────────────────────────────────────
 GEO_REDDIT_SUBS = [
     "worldnews", "geopolitics", "economics",
@@ -98,12 +125,13 @@ def fetch_feeds(dry_run: bool = False) -> list[dict]:
                 "watchlist_note":  "",
             })
 
+    tier1_feeds, tier2_feeds = _get_sources()
     print("Fetching Tier 1 RSS feeds…")
-    for url in GEO_RSS_TIER_1:
+    for url in tier1_feeds:
         parse_feed(url, 1)
 
     print("Fetching Tier 2 RSS feeds…")
-    for url in GEO_RSS_TIER_2:
+    for url in tier2_feeds:
         parse_feed(url, 2)
 
     print(f"Fetched {len(articles)} articles within past {CUTOFF_HOURS}h.")
@@ -141,7 +169,7 @@ def deduplicate(articles: list[dict]) -> list[dict]:
 
 def gate1_filter(articles: list[dict]) -> list[dict]:
     """Keep only articles with at least one geo keyword in headline or summary."""
-    all_keywords = [kw for kws in GEO_KEYWORDS.values() for kw in kws]
+    all_keywords = [kw for kws in _get_keywords().values() for kw in kws]
     passed = []
     for a in articles:
         text = (a["headline"] + " " + a["summary_snippet"]).lower()
@@ -154,9 +182,10 @@ def gate1_filter(articles: list[dict]) -> list[dict]:
 # ── Step 4: Topic tagging (metadata only) ────────────────────────────────────
 
 def tag_topics(articles: list[dict]) -> list[dict]:
+    keywords = _get_keywords()
     for a in articles:
         text = (a["headline"] + " " + a["summary_snippet"]).lower()
-        matched = [t for t, kws in GEO_KEYWORDS.items() if any(kw in text for kw in kws)]
+        matched = [t for t, kws in keywords.items() if any(kw in text for kw in kws)]
         a["topic"] = matched if matched else ["other"]
     return articles
 
@@ -333,7 +362,7 @@ def _recency_score(published_at: str) -> float:
 def _headline_multiplier(headline: str) -> float:
     """1.5× boost when geo keywords appear in the headline itself (not just summary)."""
     headline_lower = headline.lower()
-    for kws in GEO_KEYWORDS.values():
+    for kws in _get_keywords().values():
         if any(kw in headline_lower for kw in kws):
             return 1.5
     return 1.0

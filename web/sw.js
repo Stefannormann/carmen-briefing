@@ -1,5 +1,5 @@
 // Service worker — caches the web app shell and downloaded episodes for offline use.
-const CACHE_NAME = 'carmen-v1';
+const CACHE_NAME = 'carmen-v2';
 const SHELL_ASSETS = [
   '/web/index.html',
   '/web/manifest.json',
