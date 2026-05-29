@@ -1,14 +1,12 @@
 name: Generate Daily Briefing
 
 on:
-  schedule:
-    # 05:00 UTC = 07:00 CEST (summer, UTC+2).
-    # During CET (winter, UTC+1), this fires at 06:00 local time.
-    # Manual adjustment required:
-    #   Last Sunday of October → change to '0 6 * * *' (CET begins, UTC+1)
-    #   Last Sunday of March   → change back to '0 5 * * *' (CEST begins, UTC+2)
-    - cron: '0 5 * * *'
-  workflow_dispatch:   # Allow manual trigger for testing
+  # Schedule disabled — briefing now runs via cron on the Hetzner VPS.
+  # Kept here as a fallback; re-enable by uncommenting the schedule block.
+  #
+  # schedule:
+  #   - cron: '0 5 * * *'   # 05:00 UTC = 07:00 CEST
+  workflow_dispatch:   # Manual trigger still available for testing
 
 jobs:
   generate:
