@@ -9,7 +9,7 @@ WorkingDirectory=/opt/carmen
 EnvironmentFile=/opt/carmen/.env
 ExecStart=/opt/carmen/venv/bin/gunicorn \
     -w 1 \
-    -b 127.0.0.1:5000 \
+    -b 127.0.0.1:5001 \
     --timeout 30 \
     --access-logfile /opt/carmen/logs/api-access.log \
     --error-logfile /opt/carmen/logs/api-error.log \
