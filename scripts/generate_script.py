@@ -60,9 +60,13 @@ STRUCTURE:
    Separate stories with exactly: ---TRANSITION---
 
 3. MARKETS SEGMENT (~4 minutes)
-   Carmen presents company news in the priority order provided.
-   No prices or numbers — news and developments only.
-   Separate stories with exactly: ---TRANSITION---
+   Carmen covers all company news as a single, flowing narrative — she moves
+   naturally between companies in the priority order given, connecting themes
+   where they exist ("Meanwhile in the AI space…", "On the semiconductor front…",
+   "Turning to crypto…"). The segment reads like one cohesive radio report, not
+   a list of separate company bulletins. No prices or numbers — news and
+   developments only. Do NOT insert any ---TRANSITION--- markers within this
+   segment. End the entire markets segment with exactly one: ---TRANSITION---
 
 4. CLOSING (~30 seconds)
    Carmen signs off warmly and mentions tomorrow's briefing.
@@ -131,6 +135,35 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
     raise RuntimeError("Gemini call failed after all retries")
 
 
+def enforce_tier_diversity(all_stories: list[dict], prioritised: list[dict]) -> list[dict]:
+    """
+    Guarantee at least one Tier 2 and one Tier 3 company in the final feed.
+
+    If a tier is absent from the prioritised slice, the highest-scoring story
+    from that tier is appended (drawn from the full scored list).
+    This ensures lower-tier companies with real news always get a voice.
+    """
+    result = list(prioritised)
+    included_tiers = {s.get("tier") for s in result}
+
+    for required_tier in (2, 3):
+        if required_tier not in included_tiers:
+            candidates = sorted(
+                [s for s in all_stories if s.get("tier") == required_tier],
+                key=lambda x: -x.get("score", 0),
+            )
+            if candidates:
+                best = candidates[0]
+                result.append(best)
+                print(
+                    f"  Forced Tier {required_tier} inclusion: "
+                    f"{best.get('name', best.get('ticker', '?'))} "
+                    f"(score={best.get('score', '?')})"
+                )
+
+    return result
+
+
 def load_json(path: Path, label: str) -> list:
     if not path.exists():
         print(f"ERROR: {label} file not found: {path}", file=sys.stderr)
@@ -150,9 +183,10 @@ def main():
     geo_stories = load_json(GEO_FILE, "geo_stories")
     market_stories = load_json(MARKET_FILE, "market_stories")
 
-    # Apply watchlist prioritisation and cap to top 15 companies
-    # (39 companies is too many for a 4-minute segment)
-    market_stories = prioritise_stories(market_stories)[:15]
+    # Apply watchlist prioritisation, cap to top 15, then guarantee
+    # at least one Tier 2 and one Tier 3 company is included.
+    market_stories_sorted = prioritise_stories(market_stories)
+    market_stories = enforce_tier_diversity(market_stories_sorted, market_stories_sorted[:15])
     print(f"Using {len(geo_stories)} geo stories and {len(market_stories)} market stories.")
 
     today = date.today().strftime("%A, %d %B %Y")
