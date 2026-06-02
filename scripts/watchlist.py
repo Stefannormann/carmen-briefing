@@ -19,6 +19,9 @@ WATCHLIST = {
         {"name": "Cipher Mining", "ticker": "CIFR", "exchange": "NASDAQ"},
         {"name": "TSMC",      "ticker": "TSM",    "exchange": "NYSE"},
         {"name": "Palantir",  "ticker": "PLTR",   "exchange": "NASDAQ"},
+        {"name": "OpenAI",    "ticker": "OPENAI", "exchange": "PRIVATE"},
+        {"name": "Anthropic", "ticker": "ANTH",   "exchange": "PRIVATE"},
+        {"name": "SpaceX",    "ticker": "SPACEX", "exchange": "PRIVATE"},
     ],
     "tier2": [
         {"name": "CoreWeave",   "ticker": "CRWV",  "exchange": "NASDAQ"},

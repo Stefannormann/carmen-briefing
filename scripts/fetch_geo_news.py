@@ -1,8 +1,8 @@
 """
-Fetch, filter, score, and select geopolitical news stories.
+Fetch, filter, score, and select stories for one content segment.
 
 Two-gate selection system:
-  Gate 1 – keyword relevance: at least one geo keyword in headline + summary
+  Gate 1 – keyword relevance: at least one segment keyword in headline + summary
   Gate 2 – composite popularity score:
             0.35 * social    (Reddit upvotes + HN points, normalised)
           + 0.15 * authority (publisher domain reputation)
@@ -10,10 +10,10 @@ Two-gate selection system:
           + 0.15 * trend     (flat 0.50 — pytrends dropped)
           + 0.10 * recency   (exponential decay, 12-hour half-life)
 
-Saves selected stories to tmp/geo_stories.json.
-
 Usage:
-    python scripts/fetch_geo_news.py [--dry-run]
+    python scripts/fetch_geo_news.py --segment strategic   # → tmp/strategic_stories.json
+    python scripts/fetch_geo_news.py --segment tech        # → tmp/tech_stories.json
+    python scripts/fetch_geo_news.py                       # defaults to strategic
 """
 
 import argparse
@@ -30,9 +30,33 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.geo_sources import GEO_RSS_TIER_1, GEO_RSS_TIER_2
-from config.geo_keywords import GEO_KEYWORDS
+from config.geo_keywords import STRATEGIC_KEYWORDS, TECH_KEYWORDS
 from config.publisher_authority import get_authority
 from scripts.watchlist import get_all_names
+
+# ── Reddit subreddits per segment ─────────────────────────────────────────────
+STRATEGIC_REDDIT_SUBS = [
+    "worldnews", "geopolitics", "economics", "europe", "China", "taiwan",
+]
+TECH_REDDIT_SUBS = [
+    "technology", "MachineLearning", "artificial", "hardware",
+    "netsec", "Futurology", "singularity",
+]
+
+# ── Config ────────────────────────────────────────────────────────────────────
+TMP_DIR = Path("tmp")
+
+CUTOFF_HOURS    = 24
+MAX_STORIES     = 3
+SIM_THRESHOLD   = 0.65
+
+W_SOCIAL    = 0.35
+W_AUTHORITY = 0.15
+W_COVERAGE  = 0.25
+W_TREND     = 0.15
+W_RECENCY   = 0.10
+TREND_SCORE = 0.50
+SOCIAL_NOT_FOUND = 0.20
 
 # ── filters.json runtime overrides ───────────────────────────────────────────
 _FILTERS_CANDIDATES = [Path("filters.json"), Path("/opt/carmen/filters.json")]
@@ -47,44 +71,18 @@ def _load_filters() -> dict | None:
     return None
 
 def _get_sources() -> tuple[list[str], list[str]]:
-    """Return (tier1_feeds, tier2_feeds) from filters.json or hardcoded defaults."""
     f = _load_filters()
     if f and "geo_sources" in f:
-        sources = f["geo_sources"]
-        return sources.get("tier1", GEO_RSS_TIER_1), sources.get("tier2", GEO_RSS_TIER_2)
+        s = f["geo_sources"]
+        return s.get("tier1", GEO_RSS_TIER_1), s.get("tier2", GEO_RSS_TIER_2)
     return GEO_RSS_TIER_1, GEO_RSS_TIER_2
 
-def _get_keywords() -> dict:
-    """Return keyword dict from filters.json or hardcoded defaults."""
+def _get_keywords(segment: str) -> dict:
     f = _load_filters()
-    if f and "geo_keywords" in f:
-        return f["geo_keywords"]
-    return GEO_KEYWORDS
-
-# ── Reddit subreddits for geo news ────────────────────────────────────────────
-GEO_REDDIT_SUBS = [
-    "worldnews", "geopolitics", "economics",
-    "technology", "europe", "China", "taiwan",
-]
-
-# ── Config ────────────────────────────────────────────────────────────────────
-TMP_DIR = Path("tmp")
-OUT_FILE = TMP_DIR / "geo_stories.json"
-
-CUTOFF_HOURS       = 24
-MAX_GEO_STORIES    = 3
-SIM_THRESHOLD      = 0.65   # TF-IDF cosine similarity for story clustering
-
-# Composite score weights (must sum to 1.0)
-W_SOCIAL    = 0.35
-W_AUTHORITY = 0.15
-W_COVERAGE  = 0.25
-W_TREND     = 0.15
-W_RECENCY   = 0.10
-TREND_SCORE = 0.50   # constant (pytrends dropped)
-
-# Social score assigned when no Reddit/HN match is found
-SOCIAL_NOT_FOUND = 0.20
+    key = "strategic_keywords" if segment == "strategic" else "tech_keywords"
+    if f and key in f:
+        return f[key]
+    return STRATEGIC_KEYWORDS if segment == "strategic" else TECH_KEYWORDS
 
 
 # ── Step 1: Fetch RSS ─────────────────────────────────────────────────────────
@@ -129,11 +127,9 @@ def fetch_feeds(dry_run: bool = False) -> list[dict]:
     print("Fetching Tier 1 RSS feeds…")
     for url in tier1_feeds:
         parse_feed(url, 1)
-
     print("Fetching Tier 2 RSS feeds…")
     for url in tier2_feeds:
         parse_feed(url, 2)
-
     print(f"Fetched {len(articles)} articles within past {CUTOFF_HOURS}h.")
     return articles
 
@@ -154,11 +150,9 @@ def _shared_consecutive(a: str, b: str, n: int = 6) -> bool:
 def deduplicate(articles: list[dict]) -> list[dict]:
     kept = []
     for article in sorted(articles, key=lambda x: x["feed_tier"]):
-        duplicate = False
-        for existing in kept:
-            if _shared_consecutive(article["headline"], existing["headline"]):
-                duplicate = True
-                break
+        duplicate = any(
+            _shared_consecutive(article["headline"], e["headline"]) for e in kept
+        )
         if not duplicate:
             kept.append(article)
     print(f"After deduplication: {len(kept)} articles.")
@@ -167,22 +161,21 @@ def deduplicate(articles: list[dict]) -> list[dict]:
 
 # ── Step 3: Gate 1 — keyword relevance filter ─────────────────────────────────
 
-def gate1_filter(articles: list[dict]) -> list[dict]:
-    """Keep only articles with at least one geo keyword in headline or summary."""
-    all_keywords = [kw for kws in _get_keywords().values() for kw in kws]
-    passed = []
-    for a in articles:
-        text = (a["headline"] + " " + a["summary_snippet"]).lower()
-        if any(kw in text for kw in all_keywords):
-            passed.append(a)
-    print(f"Gate 1 (keyword): {len(passed)}/{len(articles)} articles passed.")
+def gate1_filter(articles: list[dict], segment: str) -> list[dict]:
+    keywords = _get_keywords(segment)
+    all_kws  = [kw for kws in keywords.values() for kw in kws]
+    passed = [
+        a for a in articles
+        if any(kw in (a["headline"] + " " + a["summary_snippet"]).lower() for kw in all_kws)
+    ]
+    print(f"Gate 1 ({segment} keywords): {len(passed)}/{len(articles)} articles passed.")
     return passed
 
 
-# ── Step 4: Topic tagging (metadata only) ────────────────────────────────────
+# ── Step 4: Topic tagging ────────────────────────────────────────────────────
 
-def tag_topics(articles: list[dict]) -> list[dict]:
-    keywords = _get_keywords()
+def tag_topics(articles: list[dict], segment: str) -> list[dict]:
+    keywords = _get_keywords(segment)
     for a in articles:
         text = (a["headline"] + " " + a["summary_snippet"]).lower()
         matched = [t for t, kws in keywords.items() if any(kw in text for kw in kws)]
@@ -190,18 +183,18 @@ def tag_topics(articles: list[dict]) -> list[dict]:
     return articles
 
 
-# ── Step 5a: Fetch Reddit posts ───────────────────────────────────────────────
+# ── Step 5a: Fetch Reddit ─────────────────────────────────────────────────────
 
-def fetch_reddit_posts(dry_run: bool = False) -> list[dict]:
-    """Fetch today's top posts from geo-relevant subreddits (no auth required)."""
+def fetch_reddit_posts(segment: str, dry_run: bool = False) -> list[dict]:
     if dry_run:
         print("[DRY-RUN] Skipping Reddit fetch.")
         return []
 
+    subs   = STRATEGIC_REDDIT_SUBS if segment == "strategic" else TECH_REDDIT_SUBS
     posts: list[dict] = []
     headers = {"User-Agent": "CarmenBriefingBot/1.0"}
 
-    for sub_name in GEO_REDDIT_SUBS:
+    for sub_name in subs:
         try:
             url  = f"https://www.reddit.com/r/{sub_name}/top.json?t=day&limit=75"
             resp = requests.get(url, headers=headers, timeout=15)
@@ -212,18 +205,17 @@ def fetch_reddit_posts(dry_run: bool = False) -> list[dict]:
                     "title": (post.get("title") or "").lower(),
                     "score": max(0, post.get("score") or 0),
                 })
-            time.sleep(1)   # be polite to Reddit's servers
+            time.sleep(1)
         except Exception as e:
             print(f"  WARN: Reddit r/{sub_name}: {e}", file=sys.stderr)
 
-    print(f"Fetched {len(posts)} Reddit posts from {len(GEO_REDDIT_SUBS)} subreddits.")
+    print(f"Fetched {len(posts)} Reddit posts from {len(subs)} subreddits.")
     return posts
 
 
-# ── Step 5b: Fetch Hacker News posts ─────────────────────────────────────────
+# ── Step 5b: Fetch HN ─────────────────────────────────────────────────────────
 
 def fetch_hn_posts(dry_run: bool = False) -> list[dict]:
-    """Fetch today's HN stories via Algolia API (no key required)."""
     if dry_run:
         print("[DRY-RUN] Skipping HN fetch.")
         return []
@@ -238,12 +230,8 @@ def fetch_hn_posts(dry_run: bool = False) -> list[dict]:
         resp.raise_for_status()
         hits = resp.json().get("hits", [])
         posts = [
-            {
-                "title": (h.get("title") or "").lower(),
-                "score": max(0, h.get("points") or 0),
-            }
-            for h in hits
-            if h.get("title")
+            {"title": (h.get("title") or "").lower(), "score": max(0, h.get("points") or 0)}
+            for h in hits if h.get("title")
         ]
         print(f"Fetched {len(posts)} HN stories.")
         return posts
@@ -252,30 +240,20 @@ def fetch_hn_posts(dry_run: bool = False) -> list[dict]:
         return []
 
 
-# ── Step 6: TF-IDF story clustering ──────────────────────────────────────────
+# ── Step 6: TF-IDF clustering ─────────────────────────────────────────────────
 
 def build_clusters(articles: list[dict]) -> list[int]:
-    """
-    Assign a cluster ID to each article based on TF-IDF cosine similarity.
-    Articles with similarity >= SIM_THRESHOLD share a cluster.
-    Returns a list of cluster IDs (one per article).
-    """
     if len(articles) < 2:
         return list(range(len(articles)))
-
     texts = [a["headline"] + " " + a.get("summary_snippet", "") for a in articles]
-
     try:
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.metrics.pairwise import cosine_similarity
-
-        vectorizer = TfidfVectorizer(stop_words="english", max_features=5000)
-        tfidf      = vectorizer.fit_transform(texts)
-        sim_matrix = cosine_similarity(tfidf)
-
-        cluster_ids  = [-1] * len(articles)
+        vectorizer  = TfidfVectorizer(stop_words="english", max_features=5000)
+        tfidf       = vectorizer.fit_transform(texts)
+        sim_matrix  = cosine_similarity(tfidf)
+        cluster_ids = [-1] * len(articles)
         next_cluster = 0
-
         for i in range(len(articles)):
             if cluster_ids[i] != -1:
                 continue
@@ -284,14 +262,10 @@ def build_clusters(articles: list[dict]) -> list[int]:
                 if cluster_ids[j] == -1 and sim_matrix[i, j] >= SIM_THRESHOLD:
                     cluster_ids[j] = next_cluster
             next_cluster += 1
-
         return cluster_ids
-
     except ImportError:
-        print("  WARN: scikit-learn not installed — each article is its own cluster.",
-              file=sys.stderr)
+        print("  WARN: scikit-learn not installed — each article is its own cluster.", file=sys.stderr)
         return list(range(len(articles)))
-
 
 def _cluster_sizes(cluster_ids: list[int]) -> dict[int, int]:
     sizes: dict[int, int] = {}
@@ -303,13 +277,12 @@ def _cluster_sizes(cluster_ids: list[int]) -> dict[int, int]:
 # ── Step 7: Scoring helpers ───────────────────────────────────────────────────
 
 _STOP = {
-    "the", "a", "an", "in", "on", "at", "to", "for", "of", "and", "or",
-    "is", "are", "was", "were", "has", "have", "will", "with", "by",
-    "from", "as", "its", "it", "that", "this", "be", "but", "not",
+    "the","a","an","in","on","at","to","for","of","and","or",
+    "is","are","was","were","has","have","will","with","by",
+    "from","as","its","it","that","this","be","but","not",
 }
 
 def _social_score(headline: str, reddit_posts: list[dict], hn_posts: list[dict]) -> float:
-    """Normalized 0–1 social score based on best-matching Reddit/HN post."""
     words = set(headline.lower().split()) - _STOP
     if not words:
         return SOCIAL_NOT_FOUND
@@ -322,15 +295,8 @@ def _social_score(headline: str, reddit_posts: list[dict], hn_posts: list[dict])
         return shared / min(len(words), len(post_words), 8)
 
     MATCH_THRESHOLD = 0.35
-
-    best_reddit = max(
-        (p["score"] for p in reddit_posts if _overlap(p["title"]) >= MATCH_THRESHOLD),
-        default=0,
-    )
-    best_hn = max(
-        (p["score"] for p in hn_posts if _overlap(p["title"]) >= MATCH_THRESHOLD),
-        default=0,
-    )
+    best_reddit = max((p["score"] for p in reddit_posts if _overlap(p["title"]) >= MATCH_THRESHOLD), default=0)
+    best_hn     = max((p["score"] for p in hn_posts     if _overlap(p["title"]) >= MATCH_THRESHOLD), default=0)
 
     r_norm = min(math.log1p(best_reddit) / math.log1p(5000), 1.0) if best_reddit > 0 else 0.0
     h_norm = min(math.log1p(best_hn)     / math.log1p(500),  1.0) if best_hn     > 0 else 0.0
@@ -341,12 +307,10 @@ def _social_score(headline: str, reddit_posts: list[dict], hn_posts: list[dict])
         return r_norm
     elif best_hn > 0:
         return h_norm
-    else:
-        return SOCIAL_NOT_FOUND
+    return SOCIAL_NOT_FOUND
 
 
 def _recency_score(published_at: str) -> float:
-    """Exponential decay with 12-hour half-life: 0h→1.0, 12h→0.50, 24h→0.25."""
     if not published_at:
         return 0.50
     try:
@@ -359,31 +323,29 @@ def _recency_score(published_at: str) -> float:
         return 0.50
 
 
-def _headline_multiplier(headline: str) -> float:
-    """1.5× boost when geo keywords appear in the headline itself (not just summary)."""
+def _headline_multiplier(headline: str, segment: str) -> float:
     headline_lower = headline.lower()
-    for kws in _get_keywords().values():
+    for kws in _get_keywords(segment).values():
         if any(kw in headline_lower for kw in kws):
             return 1.5
     return 1.0
 
 
-# ── Step 8: Compute composite popularity scores ───────────────────────────────
+# ── Step 8: Composite scoring ─────────────────────────────────────────────────
 
 def score_popularity(
-    articles:      list[dict],
-    reddit_posts:  list[dict],
-    hn_posts:      list[dict],
-    cluster_ids:   list[int],
-    sizes:         dict[int, int],
+    articles:     list[dict],
+    reddit_posts: list[dict],
+    hn_posts:     list[dict],
+    cluster_ids:  list[int],
+    sizes:        dict[int, int],
+    segment:      str,
 ) -> list[dict]:
-    """Apply composite popularity formula to each article."""
     for i, a in enumerate(articles):
         social    = _social_score(a["headline"], reddit_posts, hn_posts)
         authority = get_authority(a["source_url"])
         coverage  = min(sizes.get(cluster_ids[i], 1) / 5.0, 1.0)
         recency   = _recency_score(a["published_at"])
-
         composite = (
             W_SOCIAL    * social    +
             W_AUTHORITY * authority +
@@ -391,10 +353,7 @@ def score_popularity(
             W_TREND     * TREND_SCORE +
             W_RECENCY   * recency
         )
-        # Headline keyword multiplier capped at 1.0
-        composite = min(composite * _headline_multiplier(a["headline"]), 1.0)
-
-        # Store as 1–10 integer for generate_script.py / prioritise_stories() compatibility
+        composite = min(composite * _headline_multiplier(a["headline"], segment), 1.0)
         a["score"] = max(1, round(composite * 9) + 1)
         a["popularity"] = {
             "social":    round(social,    3),
@@ -404,23 +363,19 @@ def score_popularity(
             "recency":   round(recency,   3),
             "composite": round(composite, 3),
         }
-
     return articles
 
 
 # ── Step 9: Watchlist tagging ─────────────────────────────────────────────────
 
 def tag_watchlist(articles: list[dict]) -> list[dict]:
-    """Flag articles that mention a watchlist company by name."""
     company_names = get_all_names()
     for a in articles:
         text = (a["headline"] + " " + a["summary_snippet"]).lower()
         for name in company_names:
             if name.lower() in text:
                 a["watchlist_flag"] = True
-                a["watchlist_note"] = (
-                    f"{name} may be directly affected by this development."
-                )
+                a["watchlist_note"] = f"{name} may be directly affected by this development."
                 break
     return articles
 
@@ -428,35 +383,30 @@ def tag_watchlist(articles: list[dict]) -> list[dict]:
 # ── Step 10: Story selection ──────────────────────────────────────────────────
 
 def select_stories(articles: list[dict]) -> list[dict]:
-    """Select top MAX_GEO_STORIES with topic diversity, highest popularity first."""
     sorted_articles = sorted(articles, key=lambda x: -x["score"])
     selected: list[dict] = []
     covered_topics: set[str] = set()
 
     def pick(candidates: list[dict], min_score: int = 0):
         for a in candidates:
-            if len(selected) >= MAX_GEO_STORIES:
+            if len(selected) >= MAX_STORIES:
                 break
             if a["score"] < min_score:
                 continue
             topics  = set(a["topic"])
             overlap = topics & covered_topics
-            # Allow same-topic duplicate only if both articles score ≥ 8
             if overlap and a["score"] < 8:
                 continue
             selected.append(a)
             covered_topics.update(topics)
 
-    # Pass 1: quality threshold
     pick(sorted_articles, min_score=4)
-    # Pass 2: fill any remaining slots
     pick(sorted_articles, min_score=1)
-    # Pass 3: fallback — take top N regardless of score
     if not selected:
         print("  WARN: No stories passed score threshold — using top articles as fallback.")
         pick(sorted_articles, min_score=0)
 
-    print(f"Selected {len(selected)} geopolitical stories.")
+    print(f"Selected {len(selected)} stories.")
     return selected
 
 
@@ -465,43 +415,58 @@ def select_stories(articles: list[dict]) -> list[dict]:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--segment",
+        choices=["strategic", "tech"],
+        default="strategic",
+        help="Which content segment to fetch (default: strategic)",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
-        help="Skip Reddit/HN API calls; use baseline social scores instead.",
+        help="Skip Reddit/HN API calls; use baseline social scores.",
     )
     args = parser.parse_args()
 
+    segment  = args.segment
+    out_file = TMP_DIR / f"{segment}_stories.json"
+    label    = "Global Strategic Affairs" if segment == "strategic" else "AI & Tech"
+
+    print(f"\n=== Fetching: {label} ===")
     TMP_DIR.mkdir(exist_ok=True)
 
-    # ── Fetch & Gate 1 ────────────────────────────────────────────────────────
     articles = fetch_feeds(args.dry_run)
     articles = deduplicate(articles)
-    articles = gate1_filter(articles)
-    articles = tag_topics(articles)
+    articles = gate1_filter(articles, segment)
+    articles = tag_topics(articles, segment)
 
     if not articles:
-        print("WARNING: No articles passed Gate 1 — saving empty output.", file=sys.stderr)
-        OUT_FILE.write_text(json.dumps([], indent=2))
+        print(f"WARNING: No articles passed Gate 1 for {label} — saving empty output.", file=sys.stderr)
+        out_file.write_text(json.dumps([], indent=2))
+        # Also write backward-compat geo_stories.json for strategic segment
+        if segment == "strategic":
+            (TMP_DIR / "geo_stories.json").write_text(json.dumps([], indent=2))
         return
 
-    # ── Social signals ─────────────────────────────────────────────────────────
-    reddit_posts = fetch_reddit_posts(args.dry_run)
+    reddit_posts = fetch_reddit_posts(segment, args.dry_run)
     hn_posts     = fetch_hn_posts(args.dry_run)
 
-    # ── Gate 2: popularity scoring ────────────────────────────────────────────
     print(f"Clustering {len(articles)} articles…")
     cluster_ids = build_clusters(articles)
     sizes       = _cluster_sizes(cluster_ids)
     print(f"  {len(set(cluster_ids))} story clusters identified.")
 
-    articles = score_popularity(articles, reddit_posts, hn_posts, cluster_ids, sizes)
+    articles = score_popularity(articles, reddit_posts, hn_posts, cluster_ids, sizes, segment)
     articles = tag_watchlist(articles)
     selected = select_stories(articles)
 
-    OUT_FILE.write_text(json.dumps(selected, indent=2, ensure_ascii=False))
-    print(f"Saved {len(selected)} stories → {OUT_FILE}")
+    out_file.write_text(json.dumps(selected, indent=2, ensure_ascii=False))
+    print(f"Saved {len(selected)} {label} stories → {out_file}")
+
+    # Backward-compat alias for strategic segment
+    if segment == "strategic":
+        (TMP_DIR / "geo_stories.json").write_text(json.dumps(selected, indent=2, ensure_ascii=False))
 
     if args.dry_run:
-        print("\n[DRY-RUN] Selected stories:")
+        print(f"\n[DRY-RUN] {label} stories:")
         for s in selected:
             pop = s.get("popularity", {})
             print(

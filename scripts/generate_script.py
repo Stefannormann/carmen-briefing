@@ -24,11 +24,13 @@ GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
 TMP_DIR = Path("tmp")
-SCRIPT_FILE    = TMP_DIR / "script.txt"
-SEGMENTS_FILE  = TMP_DIR / "segments.json"
-GEO_FILE       = TMP_DIR / "geo_stories.json"
-MARKET_FILE    = TMP_DIR / "market_stories.json"
-METADATA_FILE  = TMP_DIR / "episode_metadata.json"
+SCRIPT_FILE       = TMP_DIR / "script.txt"
+SEGMENTS_FILE     = TMP_DIR / "segments.json"
+STRATEGIC_FILE    = TMP_DIR / "strategic_stories.json"
+TECH_FILE         = TMP_DIR / "tech_stories.json"
+GEO_FILE          = TMP_DIR / "geo_stories.json"   # backward-compat fallback
+MARKET_FILE       = TMP_DIR / "market_stories.json"
+METADATA_FILE     = TMP_DIR / "episode_metadata.json"
 
 TRANSITION_MARKER = "---TRANSITION---"
 
@@ -46,29 +48,39 @@ Write only Carmen's spoken words.
 STRUCTURE:
 
 1. INTRO (~30 seconds)
-   Carmen greets the listener and previews today's 2–3 top stories in one
-   sentence each. Warm and energising.
+   Carmen greets the listener and briefly previews one headline from each of the
+   three segments. Warm and energising.
 
-2. GEOPOLITICAL SEGMENT (~4–6 minutes, 2–3 stories)
+2. GLOBAL STRATEGIC AFFAIRS (~3–5 minutes, 2–3 stories)
    For each story, Carmen covers three things in order:
    - What happened (facts, briefly)
-   - Why it matters geopolitically (analysis and context)
+   - Why it matters strategically or geopolitically (analysis and context)
    - What to watch next (forward-looking signal)
-   Each story should be approximately 2 minutes of spoken audio (~280 words).
+   Each story should be approximately 90–120 seconds of spoken audio (~200 words).
    If a story has watchlist_flag = true, Carmen adds one bridging sentence at
    the end of that story noting the company relevance (use watchlist_note).
    Separate stories with exactly: ---TRANSITION---
 
-3. MARKETS SEGMENT (~4 minutes)
-   Carmen covers all company news as a single, flowing narrative — she moves
-   naturally between companies in the priority order given, connecting themes
-   where they exist ("Meanwhile in the AI space…", "On the semiconductor front…",
-   "Turning to crypto…"). The segment reads like one cohesive radio report, not
-   a list of separate company bulletins. No prices or numbers — news and
-   developments only. Do NOT insert any ---TRANSITION--- markers within this
-   segment. End the entire markets segment with exactly one: ---TRANSITION---
+3. AI & TECH (~3–5 minutes, 2–3 stories)
+   Same format as segment 2 — what happened, why it matters, what to watch.
+   Focus on the strategic and practical significance of each development,
+   not just the technical details.
+   If a story has watchlist_flag = true, add the watchlist bridge sentence.
+   Separate stories with exactly: ---TRANSITION---
 
-4. CLOSING (~30 seconds)
+4. MARKETS (~4 minutes)
+   Carmen covers company news as ONE single flowing narrative — she moves
+   naturally between companies in the priority order given, connecting themes
+   where they exist ("Meanwhile in the AI space…", "On the semiconductor front…").
+   IMPORTANT RULES FOR THIS SEGMENT:
+   - Write it ONCE, straight through, start to finish.
+   - Cover each company exactly ONE time — never summarise first then repeat.
+   - Select the 8–10 most newsworthy items; you do not need to mention every company.
+   - No prices or numbers — news and developments only.
+   - Do NOT place any ---TRANSITION--- markers inside this segment.
+   - End the segment with exactly one: ---TRANSITION---
+
+5. CLOSING (~30 seconds)
    Carmen signs off warmly and mentions tomorrow's briefing.
 """
 
@@ -180,22 +192,44 @@ def main():
 
     TMP_DIR.mkdir(exist_ok=True)
 
-    geo_stories = load_json(GEO_FILE, "geo_stories")
+    # Load strategic stories — prefer new file, fall back to legacy geo_stories.json
+    if STRATEGIC_FILE.exists():
+        strategic_stories = load_json(STRATEGIC_FILE, "strategic_stories")
+    elif GEO_FILE.exists():
+        print("  NOTE: strategic_stories.json not found — falling back to geo_stories.json")
+        strategic_stories = load_json(GEO_FILE, "geo_stories")
+    else:
+        print("ERROR: No strategic stories file found.", file=sys.stderr)
+        sys.exit(1)
+
+    # Load tech stories — empty list if not yet generated (graceful degradation)
+    if TECH_FILE.exists():
+        tech_stories = load_json(TECH_FILE, "tech_stories")
+    else:
+        print("  NOTE: tech_stories.json not found — AI & Tech segment will be empty.")
+        tech_stories = []
+
     market_stories = load_json(MARKET_FILE, "market_stories")
 
     # Apply watchlist prioritisation, cap to top 15, then guarantee
     # at least one Tier 2 and one Tier 3 company is included.
     market_stories_sorted = prioritise_stories(market_stories)
     market_stories = enforce_tier_diversity(market_stories_sorted, market_stories_sorted[:15])
-    print(f"Using {len(geo_stories)} geo stories and {len(market_stories)} market stories.")
+    print(
+        f"Using {len(strategic_stories)} strategic + "
+        f"{len(tech_stories)} tech + "
+        f"{len(market_stories)} market stories."
+    )
 
     today = date.today().strftime("%A, %d %B %Y")
 
     prompt = (
         f"Today's date: {today}\n\n"
-        "GEOPOLITICAL STORIES (in selected order, present in this sequence):\n"
-        + json.dumps(geo_stories, indent=2, ensure_ascii=False)
-        + "\n\nCOMPANY NEWS (in priority order, present in this sequence):\n"
+        "GLOBAL STRATEGIC AFFAIRS STORIES (in selected order, present in this sequence):\n"
+        + json.dumps(strategic_stories, indent=2, ensure_ascii=False)
+        + "\n\nAI & TECH STORIES (in selected order, present in this sequence):\n"
+        + json.dumps(tech_stories, indent=2, ensure_ascii=False)
+        + "\n\nCOMPANY NEWS (in priority order, present as single narrative):\n"
         + json.dumps(market_stories, indent=2, ensure_ascii=False)
     )
 
@@ -206,32 +240,35 @@ def main():
     print(f"Script saved → {SCRIPT_FILE} ({len(script)} chars)")
 
     # Save episode metadata sidecar for the PWA Episode Details module
+    def _story_meta(s: dict) -> dict:
+        return {
+            "headline":        s.get("headline", ""),
+            "summary_snippet": s.get("summary_snippet", ""),
+            "source_url":      s.get("source_url", ""),
+            "topic":           s.get("topic", []),
+            "score":           s.get("score", 5),
+            "watchlist_flag":  s.get("watchlist_flag", False),
+            "watchlist_note":  s.get("watchlist_note", ""),
+        }
+
+    def _market_meta(s: dict) -> dict:
+        return {
+            "headline":        s.get("headline", ""),
+            "summary_snippet": s.get("summary_snippet", ""),
+            "source_url":      s.get("source_url", ""),
+            "ticker":          s.get("ticker", ""),
+            "name":            s.get("name", ""),
+            "tier":            s.get("tier", 3),
+            "score":           s.get("score", 5),
+        }
+
     metadata = {
-        "date": date.today().isoformat(),
-        "geo_stories": [
-            {
-                "headline":        s.get("headline", ""),
-                "summary_snippet": s.get("summary_snippet", ""),
-                "source_url":      s.get("source_url", ""),
-                "topic":           s.get("topic", []),
-                "score":           s.get("score", 5),
-                "watchlist_flag":  s.get("watchlist_flag", False),
-                "watchlist_note":  s.get("watchlist_note", ""),
-            }
-            for s in geo_stories
-        ],
-        "market_stories": [
-            {
-                "headline":        s.get("headline", ""),
-                "summary_snippet": s.get("summary_snippet", ""),
-                "source_url":      s.get("source_url", ""),
-                "ticker":          s.get("ticker", ""),
-                "name":            s.get("name", ""),
-                "tier":            s.get("tier", 3),
-                "score":           s.get("score", 5),
-            }
-            for s in market_stories
-        ],
+        "date":               date.today().isoformat(),
+        "strategic_stories":  [_story_meta(s) for s in strategic_stories],
+        "tech_stories":       [_story_meta(s) for s in tech_stories],
+        "market_stories":     [_market_meta(s) for s in market_stories],
+        # backward-compat alias
+        "geo_stories":        [_story_meta(s) for s in strategic_stories],
     }
     METADATA_FILE.write_text(json.dumps(metadata, indent=2, ensure_ascii=False))
     print(f"Episode metadata saved → {METADATA_FILE}")
