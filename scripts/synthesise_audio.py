@@ -9,6 +9,7 @@ Usage:
 import argparse
 import asyncio
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -27,6 +28,16 @@ SEGMENTS_JSON = TMP_DIR / "segments.json"
 OUT_DIR = TMP_DIR / "segments"
 
 
+# Strips markdown artifacts Gemini sometimes slips in (e.g. "### Markets")
+# despite being told to write spoken-only text — edge-tts otherwise reads
+# "#", "*", "_" and backtick characters aloud.
+MARKDOWN_ARTIFACTS = re.compile(r"[#*_`]")
+
+
+def clean_for_speech(text: str) -> str:
+    return MARKDOWN_ARTIFACTS.sub("", text)
+
+
 async def synthesise_segment(text: str, out_path: Path) -> None:
     communicate = edge_tts.Communicate(text, CARMEN_VOICE, rate=CARMEN_RATE, pitch=CARMEN_PITCH)
     await communicate.save(str(out_path))
@@ -42,8 +53,16 @@ async def main_async(dry_run: bool) -> None:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Remove stale segment files from previous runs — otherwise leftover
+    # segments from a day with more stories than today get picked up by
+    # stitch_audio.py's glob and tacked onto the end of the episode.
+    if not dry_run:
+        for stale in OUT_DIR.glob("segment_*.mp3"):
+            stale.unlink()
+
     print(f"Synthesising {len(segments)} segments with voice: {CARMEN_VOICE}")
     for i, text in enumerate(segments):
+        text = clean_for_speech(text)
         out_path = OUT_DIR / f"segment_{i:02d}.mp3"
         if dry_run:
             print(f"  [DRY-RUN] Would synthesise segment {i:02d} ({len(text)} chars) → {out_path}")
