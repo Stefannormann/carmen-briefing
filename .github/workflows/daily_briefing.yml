@@ -1,12 +1,9 @@
 name: Generate Daily Briefing
 
 on:
-  # Schedule disabled — briefing now runs via cron on the Hetzner VPS.
-  # Kept here as a fallback; re-enable by uncommenting the schedule block.
-  #
-  # schedule:
-  #   - cron: '0 5 * * *'   # 05:00 UTC = 07:00 CEST
-  workflow_dispatch:   # Manual trigger still available for testing
+  schedule:
+    - cron: '0 5 * * *'   # 05:00 UTC = 07:00 CEST (summer) / 06:00 CET (winter)
+  workflow_dispatch:   # Manual trigger available for testing
 
 jobs:
   generate:
@@ -43,8 +40,11 @@ jobs:
         env:
           FREESOUND_API_KEY: ${{ secrets.FREESOUND_API_KEY }}
 
-      - name: Fetch geopolitical news
-        run: python scripts/fetch_geo_news.py
+      - name: Fetch strategic news
+        run: python scripts/fetch_geo_news.py --segment strategic
+
+      - name: Fetch tech news
+        run: python scripts/fetch_geo_news.py --segment tech
 
       - name: Fetch markets news
         run: python scripts/fetch_market_news.py

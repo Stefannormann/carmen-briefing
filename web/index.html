@@ -19,6 +19,7 @@
       --surface2: #1e2a4a;
       --accent:   #e94560;
       --gold:     #f5a623;
+      --purple:   #a78bfa;
       --text:     #e8e8f0;
       --muted:    #8888a8;
       --border:   #2e3460;
@@ -26,23 +27,24 @@
       --panel-w:  320px;
     }
 
-    html, body {
-      height: 100%;
-    }
+    html, body { height: 100%; }
 
     body {
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* ── Mobile layout: centred single column ─────────────── */
+    .page-wrap {
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 32px);
-      overflow-x: hidden;
     }
 
-    /* ── Header ─────────────────────────────────────────── */
     header {
       width: 100%;
       max-width: 480px;
@@ -51,6 +53,50 @@
       justify-content: space-between;
       padding: 36px 0 20px;
     }
+
+    .left-col,
+    .right-col { width: 100%; max-width: 480px; }
+
+    /* ── Desktop two-column layout ────────────────────────── */
+    @media (min-width: 900px) {
+      .page-wrap {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 28px;
+        padding: 0 40px env(safe-area-inset-bottom, 40px);
+        max-width: 1300px;
+        margin: 0 auto;
+      }
+
+      header {
+        max-width: unset;
+        width: 100%;
+        padding: 36px 40px 20px;
+        position: relative;
+        left: 0; right: 0;
+        /* Span full width above columns */
+        order: -1;
+        flex-shrink: 0;
+      }
+
+      .left-col {
+        width: 400px;
+        max-width: 400px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .right-col {
+        flex: 1;
+        max-width: 680px;
+        min-width: 0;
+      }
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
     .header-text h1 {
       font-size: 2.2rem;
       font-weight: 700;
@@ -77,14 +123,13 @@
     #settings-btn:hover { background: var(--surface2); color: var(--text); }
     #settings-btn svg { width: 22px; height: 22px; fill: currentColor; }
 
-    /* ── Add-to-Home-Screen banner ──────────────────────── */
+    /* ── Add-to-Home-Screen banner ───────────────────────── */
     #a2hs {
       display: none;
       background: var(--surface);
       border-radius: var(--radius);
       padding: 14px 18px;
       width: 100%;
-      max-width: 480px;
       margin-bottom: 16px;
       font-size: 0.85rem;
       color: var(--text);
@@ -96,13 +141,12 @@
       cursor: pointer; float: right; font-size: 1.1rem; line-height: 1;
     }
 
-    /* ── Player card ────────────────────────────────────── */
+    /* ── Player card ─────────────────────────────────────── */
     .player-card {
       background: var(--surface);
       border-radius: var(--radius);
       padding: 24px 22px 18px;
       width: 100%;
-      max-width: 480px;
       margin-bottom: 12px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.45);
     }
@@ -119,7 +163,6 @@
       margin-bottom: 18px;
     }
 
-    /* Controls row */
     .controls {
       display: flex;
       align-items: center;
@@ -157,10 +200,7 @@
     #play-btn:active { transform: scale(0.93); }
     #play-btn svg { width: 28px; height: 28px; fill: #fff; }
 
-    /* Progress row */
-    .progress-row {
-      margin-bottom: 4px;
-    }
+    .progress-row { margin-bottom: 4px; }
     #progress {
       -webkit-appearance: none;
       appearance: none;
@@ -198,55 +238,57 @@
       font-size: 0.80rem;
       color: var(--muted);
       min-height: 18px;
-      margin-bottom: 10px;
     }
 
-    /* Details toggle */
-    .details-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 0 0;
-      border-top: 1px solid var(--border);
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 0.82rem;
-      user-select: none;
-      transition: color 0.15s;
-    }
-    .details-toggle:hover { color: var(--text); }
-    .details-toggle .chevron {
-      font-size: 1rem;
-      transition: transform 0.25s;
-    }
-    .details-toggle.open .chevron { transform: rotate(90deg); }
-
-    /* ── Episode Details panel ──────────────────────────── */
+    /* ── Episode Details panel (always visible) ──────────── */
     .details-panel {
       background: var(--surface);
       border-radius: var(--radius);
       width: 100%;
-      max-width: 480px;
       margin-bottom: 12px;
-      overflow: hidden;
       box-shadow: 0 4px 16px rgba(0,0,0,0.3);
     }
-    .details-body {
-      padding: 16px 22px 18px;
-      display: none;
-    }
-    .details-body.open { display: block; }
 
-    .details-section { margin-bottom: 16px; }
+    .details-header {
+      padding: 14px 22px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .details-header-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+    }
+    .details-date {
+      font-size: 0.88rem;
+      color: var(--text);
+      font-weight: 600;
+      margin-top: 3px;
+    }
+
+    .details-body { padding: 16px 22px 18px; }
+
+    .details-section { margin-bottom: 18px; }
     .details-section:last-child { margin-bottom: 0; }
 
     .details-section h3 {
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 1.4px;
-      color: var(--muted);
       margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
     }
+    .seg-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .seg-dot-geo    { background: var(--accent); }
+    .seg-dot-tech   { background: var(--purple); }
+    .seg-dot-market { background: var(--gold); }
 
     .story-item {
       display: flex;
@@ -255,20 +297,17 @@
       align-items: flex-start;
     }
     .story-item:last-child { margin-bottom: 0; }
+
     .story-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: var(--accent);
       flex-shrink: 0;
       margin-top: 6px;
     }
-    .story-market-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--gold);
-      flex-shrink: 0;
-      margin-top: 6px;
-    }
+    .story-dot-geo    { background: var(--accent); }
+    .story-dot-tech   { background: var(--purple); }
+    .story-dot-market { background: var(--gold); }
+
     .story-text { flex: 1; }
     .story-headline {
       font-size: 0.86rem;
@@ -280,10 +319,7 @@
       color: var(--muted);
       margin-top: 2px;
     }
-    .story-headline a {
-      color: inherit;
-      text-decoration: none;
-    }
+    .story-headline a { color: inherit; text-decoration: none; }
     .story-headline a:hover { color: var(--accent); }
 
     .details-empty {
@@ -293,10 +329,7 @@
     }
 
     /* ── Archive list ────────────────────────────────────── */
-    .archive {
-      width: 100%;
-      max-width: 480px;
-    }
+    .archive { width: 100%; }
     .archive h2 {
       font-size: 0.72rem;
       text-transform: uppercase;
@@ -336,7 +369,7 @@
     }
     .ep-meta { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
 
-    /* ── Settings overlay + panel ───────────────────────── */
+    /* ── Settings overlay + panel ────────────────────────── */
     #settings-overlay {
       display: none;
       position: fixed;
@@ -346,10 +379,7 @@
       opacity: 0;
       transition: opacity 0.25s;
     }
-    #settings-overlay.open {
-      display: block;
-      opacity: 1;
-    }
+    #settings-overlay.open { display: block; opacity: 1; }
 
     #settings-panel {
       position: fixed;
@@ -365,9 +395,7 @@
       overflow-y: auto;
       padding-bottom: env(safe-area-inset-bottom, 24px);
     }
-    #settings-panel.open {
-      transform: translateX(0);
-    }
+    #settings-panel.open { transform: translateX(0); }
 
     .settings-header {
       display: flex;
@@ -380,10 +408,7 @@
       background: var(--surface);
       z-index: 1;
     }
-    .settings-header h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
+    .settings-header h2 { font-size: 1.1rem; font-weight: 600; }
     .settings-close {
       background: none;
       border: none;
@@ -397,15 +422,9 @@
     }
     .settings-close:hover { background: var(--surface2); color: var(--text); }
 
-    .settings-body {
-      padding: 8px 0;
-      flex: 1;
-    }
+    .settings-body { padding: 8px 0; flex: 1; }
 
-    /* Accordion */
-    .accordion-item {
-      border-bottom: 1px solid var(--border);
-    }
+    .accordion-item { border-bottom: 1px solid var(--border); }
     .accordion-header {
       display: flex;
       align-items: center;
@@ -424,11 +443,7 @@
       transition: transform 0.22s;
     }
     .accordion-header.open .acc-chevron { transform: rotate(90deg); }
-
-    .accordion-content {
-      display: none;
-      padding: 0 20px 16px;
-    }
+    .accordion-content { display: none; padding: 0 20px 16px; }
     .accordion-content.open { display: block; }
 
     .setting-row {
@@ -437,23 +452,10 @@
       justify-content: space-between;
       padding: 10px 0;
     }
-    .setting-label {
-      font-size: 0.88rem;
-      color: var(--text);
-    }
-    .setting-desc {
-      font-size: 0.80rem;
-      color: var(--muted);
-      margin-top: 4px;
-      line-height: 1.4;
-    }
+    .setting-label { font-size: 0.88rem; color: var(--text); }
+    .setting-desc  { font-size: 0.80rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
 
-    /* Toggle switch */
-    .toggle-switch {
-      position: relative;
-      width: 44px; height: 24px;
-      flex-shrink: 0;
-    }
+    .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .toggle-slider {
       position: absolute;
@@ -493,122 +495,124 @@
       transition: opacity 0.15s;
     }
     #biometric-enroll-btn:active { opacity: 0.8; }
+    #biometric-status { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
 
-    #biometric-status {
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-top: 6px;
-    }
-
-    /* ── Footer ─────────────────────────────────────────── */
+    /* ── Footer ──────────────────────────────────────────── */
     footer {
-      margin-top: auto;
       padding-top: 28px;
       font-size: 0.73rem;
       color: var(--muted);
       text-align: center;
       width: 100%;
-      max-width: 480px;
+    }
+    @media (min-width: 900px) {
+      footer { max-width: 1220px; margin: 0 auto; padding-left: 40px; padding-right: 40px; }
     }
   </style>
 </head>
 <body>
 
-<!-- ── Header ──────────────────────────────────────────────── -->
-<header>
-  <div class="header-text">
-    <h1>Carmen <span>Briefing</span></h1>
-    <p id="header-date">Loading…</p>
-  </div>
-  <button id="settings-btn" aria-label="Settings" onclick="openSettings()">
-    <!-- Cogwheel icon -->
-    <svg viewBox="0 0 24 24">
-      <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.41l-.36 2.54a7.1 7.1 0 0 0-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.64 8.47a.47.47 0 0 0 .12.61l2.03 1.58c-.04.3-.07.62-.07.94s.03.64.07.94l-2.03 1.58a.47.47 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.36 1.04.67 1.62.94l.36 2.54c.05.24.27.41.48.41h4c.24 0 .44-.17.48-.41l.36-2.54a7.1 7.1 0 0 0 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.03-1.58zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/>
-    </svg>
-  </button>
-</header>
+<div class="page-wrap">
 
-<!-- ── Add-to-Home-Screen banner ──────────────────────────────── -->
-<div id="a2hs">
-  <button onclick="dismissA2hs()" aria-label="Dismiss">×</button>
-  <strong>Add to Home Screen</strong> — tap the Share button in Safari, then
-  "Add to Home Screen" for one-tap access every morning.
-</div>
-
-<!-- ── Player card ──────────────────────────────────────────── -->
-<div class="player-card">
-  <div class="episode-title" id="ep-title">Loading episode…</div>
-  <div class="episode-date" id="ep-date"></div>
-
-  <div class="controls">
-    <!-- Skip back 15s -->
-    <button class="skip-btn" id="skip-back-btn" aria-label="Skip back 15 seconds" onclick="skipAudio(-15)">
+  <!-- Header -->
+  <header>
+    <div class="header-text">
+      <h1>Carmen <span>Briefing</span></h1>
+      <p id="header-date">Loading…</p>
+    </div>
+    <button id="settings-btn" aria-label="Settings" onclick="openSettings()">
       <svg viewBox="0 0 24 24">
-        <path d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-        <text x="7.5" y="14.5" font-size="5.5" fill="currentColor" font-family="sans-serif" font-weight="700">15</text>
+        <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.41l-.36 2.54a7.1 7.1 0 0 0-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.64 8.47a.47.47 0 0 0 .12.61l2.03 1.58c-.04.3-.07.62-.07.94s.03.64.07.94l-2.03 1.58a.47.47 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.36 1.04.67 1.62.94l.36 2.54c.05.24.27.41.48.41h4c.24 0 .44-.17.48-.41l.36-2.54a7.1 7.1 0 0 0 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.03-1.58zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/>
       </svg>
     </button>
+  </header>
 
-    <!-- Play / Pause -->
-    <button id="play-btn" aria-label="Play / Pause">
-      <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-      <svg id="icon-pause" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-    </button>
+  <!-- Left column: player + archive -->
+  <div class="left-col">
 
-    <!-- Skip forward 15s -->
-    <button class="skip-btn" id="skip-fwd-btn" aria-label="Skip forward 15 seconds" onclick="skipAudio(15)">
-      <svg viewBox="0 0 24 24">
-        <path d="M12.01 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/>
-        <text x="7.5" y="14.5" font-size="5.5" fill="currentColor" font-family="sans-serif" font-weight="700">15</text>
-      </svg>
-    </button>
-  </div>
-
-  <div class="progress-row">
-    <input type="range" id="progress" value="0" min="0" max="100" step="0.1" aria-label="Seek" />
-  </div>
-  <div class="timestamps">
-    <span id="time-current">0:00</span>
-    <span id="time-total">--:--</span>
-  </div>
-
-  <div class="status" id="status">Select an episode below</div>
-
-  <div class="details-toggle" id="details-toggle" role="button" tabindex="0"
-       onclick="toggleDetails()" onkeydown="if(event.key==='Enter')toggleDetails()">
-    <span>Today's Stories</span>
-    <span class="chevron">›</span>
-  </div>
-</div>
-
-<!-- ── Episode Details panel ─────────────────────────────────── -->
-<div class="details-panel" id="details-panel">
-  <div class="details-body" id="details-body">
-    <div id="details-loading" class="details-empty">Loading details…</div>
-
-    <div id="details-geo" class="details-section" style="display:none">
-      <h3>World News</h3>
-      <div id="details-geo-list"></div>
+    <div id="a2hs">
+      <button onclick="dismissA2hs()" aria-label="Dismiss">×</button>
+      <strong>Add to Home Screen</strong> — tap the Share button in Safari, then
+      "Add to Home Screen" for one-tap access every morning.
     </div>
 
-    <div id="details-markets" class="details-section" style="display:none">
-      <h3>Markets</h3>
-      <div id="details-markets-list"></div>
+    <div class="player-card">
+      <div class="episode-title" id="ep-title">Loading episode…</div>
+      <div class="episode-date" id="ep-date"></div>
+
+      <div class="controls">
+        <button class="skip-btn" id="skip-back-btn" aria-label="Skip back 15 seconds" onclick="skipAudio(-15)">
+          <svg viewBox="0 0 24 24">
+            <path d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+            <text x="7.5" y="14.5" font-size="5.5" fill="currentColor" font-family="sans-serif" font-weight="700">15</text>
+          </svg>
+        </button>
+
+        <button id="play-btn" aria-label="Play / Pause">
+          <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="icon-pause" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+
+        <button class="skip-btn" id="skip-fwd-btn" aria-label="Skip forward 15 seconds" onclick="skipAudio(15)">
+          <svg viewBox="0 0 24 24">
+            <path d="M12.01 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/>
+            <text x="7.5" y="14.5" font-size="5.5" fill="currentColor" font-family="sans-serif" font-weight="700">15</text>
+          </svg>
+        </button>
+      </div>
+
+      <div class="progress-row">
+        <input type="range" id="progress" value="0" min="0" max="100" step="0.1" aria-label="Seek" />
+      </div>
+      <div class="timestamps">
+        <span id="time-current">0:00</span>
+        <span id="time-total">--:--</span>
+      </div>
+      <div class="status" id="status">Select an episode below</div>
     </div>
-  </div>
-</div>
 
-<!-- ── Archive list ──────────────────────────────────────────── -->
-<div class="archive">
-  <h2>Recent Episodes</h2>
-  <div id="ep-list">Loading…</div>
-</div>
+    <div class="archive">
+      <h2>Recent Episodes</h2>
+      <div id="ep-list">Loading…</div>
+    </div>
 
-<footer>Carmen Briefing · Generated daily · Powered by Gemini &amp; edge-tts</footer>
+  </div><!-- /left-col -->
+
+  <!-- Right column: episode details (always visible) -->
+  <div class="right-col">
+    <div class="details-panel" id="details-panel">
+      <div class="details-header">
+        <div class="details-header-label">Episode Details</div>
+        <div class="details-date" id="details-date">—</div>
+      </div>
+      <div class="details-body">
+        <div id="details-loading" class="details-empty">Select an episode to see its stories.</div>
+
+        <div id="details-geo" class="details-section" style="display:none">
+          <h3><span class="seg-dot seg-dot-geo"></span>World News</h3>
+          <div id="details-geo-list"></div>
+        </div>
+
+        <div id="details-tech" class="details-section" style="display:none">
+          <h3><span class="seg-dot seg-dot-tech"></span>Tech &amp; AI</h3>
+          <div id="details-tech-list"></div>
+        </div>
+
+        <div id="details-markets" class="details-section" style="display:none">
+          <h3><span class="seg-dot seg-dot-market"></span>Markets</h3>
+          <div id="details-markets-list"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /right-col -->
+
+  <footer>Carmen Briefing · Generated daily · Powered by Gemini &amp; edge-tts</footer>
+
+</div><!-- /page-wrap -->
 
 <audio id="audio"></audio>
 
-<!-- ── Settings overlay + panel ──────────────────────────────── -->
+<!-- Settings -->
 <div id="settings-overlay" onclick="closeSettings()"></div>
 
 <div id="settings-panel" role="dialog" aria-label="Settings" aria-modal="true">
@@ -618,7 +622,6 @@
   </div>
   <div class="settings-body">
 
-    <!-- Security accordion -->
     <div class="accordion-item">
       <div class="accordion-header" id="acc-security" onclick="toggleAccordion('security')" role="button" tabindex="0">
         <span>🔒 Security</span>
@@ -637,7 +640,6 @@
       </div>
     </div>
 
-    <!-- About accordion -->
     <div class="accordion-item">
       <div class="accordion-header" id="acc-about" onclick="toggleAccordion('about')" role="button" tabindex="0">
         <span>ℹ About</span>
@@ -670,9 +672,8 @@ const epDate      = document.getElementById('ep-date');
 const headerDate  = document.getElementById('header-date');
 const epList      = document.getElementById('ep-list');
 
-let episodes    = [];
-let activeIndex = -1;
-let detailsOpen = false;
+let episodes        = [];
+let activeIndex     = -1;
 let currentMetadata = null;
 
 /* ── Helpers ─────────────────────────────────────────────────── */
@@ -684,6 +685,14 @@ function fmt(secs) {
 function setPlaying(playing) {
   iconPlay.style.display  = playing ? 'none' : '';
   iconPause.style.display = playing ? ''     : 'none';
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /* ── Audio controls ──────────────────────────────────────────── */
@@ -730,10 +739,10 @@ function loadEpisode(index) {
   epDate.textContent  = new Date(ep.date + 'T00:00:00').toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
-  statusEl.textContent     = 'Ready';
-  timeCurrent.textContent  = '0:00';
-  timeTotal.textContent    = ep.duration_seconds ? fmt(ep.duration_seconds) : '--:--';
-  progress.value           = 0;
+  statusEl.textContent    = 'Ready';
+  timeCurrent.textContent = '0:00';
+  timeTotal.textContent   = ep.duration_seconds ? fmt(ep.duration_seconds) : '--:--';
+  progress.value          = 0;
 
   audio.src = `../episodes/${ep.filename}`;
   audio.load();
@@ -743,37 +752,32 @@ function loadEpisode(index) {
     el.classList.toggle('active', i === index);
   });
 
-  // Refresh details panel if open
-  if (detailsOpen) loadDetails(ep);
+  // Details panel is always visible — always refresh it
+  loadDetails(ep);
 }
 
 /* ── Episode Details ─────────────────────────────────────────── */
-function toggleDetails() {
-  detailsOpen = !detailsOpen;
-  const toggle = document.getElementById('details-toggle');
-  const body   = document.getElementById('details-body');
-  toggle.classList.toggle('open', detailsOpen);
-  body.classList.toggle('open', detailsOpen);
-
-  if (detailsOpen && episodes[activeIndex]) {
-    loadDetails(episodes[activeIndex]);
-  }
-}
-
 async function loadDetails(ep) {
+  document.getElementById('details-date').textContent = ep
+    ? new Date(ep.date + 'T00:00:00').toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      })
+    : '—';
+
   if (!ep || !ep.metadata) {
     showDetailsEmpty('No story details available for this episode.');
     return;
   }
 
-  // Return cached metadata if already loaded for this episode
   if (currentMetadata && currentMetadata.date === ep.date) {
     renderDetails(currentMetadata);
     return;
   }
 
+  document.getElementById('details-loading').textContent   = 'Loading details…';
   document.getElementById('details-loading').style.display = '';
   document.getElementById('details-geo').style.display     = 'none';
+  document.getElementById('details-tech').style.display    = 'none';
   document.getElementById('details-markets').style.display = 'none';
 
   try {
@@ -787,86 +791,91 @@ async function loadDetails(ep) {
 }
 
 function showDetailsEmpty(msg) {
-  document.getElementById('details-loading').textContent    = msg;
-  document.getElementById('details-loading').style.display  = '';
-  document.getElementById('details-geo').style.display      = 'none';
-  document.getElementById('details-markets').style.display  = 'none';
+  document.getElementById('details-loading').textContent   = msg;
+  document.getElementById('details-loading').style.display = '';
+  document.getElementById('details-geo').style.display     = 'none';
+  document.getElementById('details-tech').style.display    = 'none';
+  document.getElementById('details-markets').style.display = 'none';
+}
+
+const TOPIC_LABELS = {
+  us_china:       'US–China',
+  us_europe:      'US–Europe',
+  eu_geopolitics: 'EU Geopolitics',
+  global_trade:   'Trade',
+  geoeconomics:   'Geoeconomics',
+  resources:      'Critical Resources',
+  energy:         'Energy',
+  supply_chain:   'Supply Chain',
+  macro:          'Macro',
+  conflicts:      'Conflicts',
+  climate_risk:   'Climate',
+  ai_core:        'AI',
+  semiconductors: 'Semiconductors',
+  advanced_tech:  'Advanced Tech',
+  cyber:          'Cyber',
+  digital_policy: 'Digital Policy',
+  infrastructure: 'Infrastructure',
+  tech_ai:        'Tech & AI',
+  usa_denmark:    'US–Denmark',
+  europe_china:   'Europe–China',
+  energy_geo:     'Energy',
+  other:          'World',
+};
+function topicLabel(t) { return TOPIC_LABELS[t] || t; }
+
+function renderStoryList(stories, listId, dotClass) {
+  document.getElementById(listId).innerHTML = stories.map(s => `
+    <div class="story-item">
+      <div class="story-dot ${dotClass}"></div>
+      <div class="story-text">
+        <div class="story-headline">
+          ${s.source_url
+            ? `<a href="${escHtml(s.source_url)}" target="_blank" rel="noopener">${escHtml(s.headline)}</a>`
+            : escHtml(s.headline)}
+        </div>
+        ${s.topic && s.topic.length
+          ? `<div class="story-meta">${s.topic.map(t => topicLabel(t)).join(' · ')}</div>`
+          : s.name || s.ticker
+            ? `<div class="story-meta">${escHtml(s.name || s.ticker)}</div>`
+            : ''}
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderDetails(meta) {
   document.getElementById('details-loading').style.display = 'none';
 
-  const geo     = (meta.geo_stories     || []);
-  const markets = (meta.market_stories  || []);
+  const geo     = meta.geo_stories    || meta.strategic_stories || [];
+  const tech    = meta.tech_stories   || [];
+  const markets = meta.market_stories || [];
 
-  // Geo section
-  const geoEl = document.getElementById('details-geo');
   if (geo.length) {
-    document.getElementById('details-geo-list').innerHTML = geo.map(s => `
-      <div class="story-item">
-        <div class="story-dot"></div>
-        <div class="story-text">
-          <div class="story-headline">
-            ${s.source_url
-              ? `<a href="${escHtml(s.source_url)}" target="_blank" rel="noopener">${escHtml(s.headline)}</a>`
-              : escHtml(s.headline)}
-          </div>
-          ${s.topic && s.topic.length
-            ? `<div class="story-meta">${s.topic.map(t => topicLabel(t)).join(' · ')}</div>`
-            : ''}
-        </div>
-      </div>
-    `).join('');
-    geoEl.style.display = '';
+    renderStoryList(geo, 'details-geo-list', 'story-dot-geo');
+    document.getElementById('details-geo').style.display = '';
   } else {
-    geoEl.style.display = 'none';
+    document.getElementById('details-geo').style.display = 'none';
   }
 
-  // Markets section
-  const mkEl = document.getElementById('details-markets');
+  if (tech.length) {
+    renderStoryList(tech, 'details-tech-list', 'story-dot-tech');
+    document.getElementById('details-tech').style.display = '';
+  } else {
+    document.getElementById('details-tech').style.display = 'none';
+  }
+
   if (markets.length) {
-    document.getElementById('details-markets-list').innerHTML = markets.map(s => `
-      <div class="story-item">
-        <div class="story-market-dot"></div>
-        <div class="story-text">
-          <div class="story-headline">
-            ${s.source_url
-              ? `<a href="${escHtml(s.source_url)}" target="_blank" rel="noopener">${escHtml(s.headline)}</a>`
-              : escHtml(s.headline)}
-          </div>
-          <div class="story-meta">${s.name || s.ticker || ''}</div>
-        </div>
-      </div>
-    `).join('');
-    mkEl.style.display = '';
+    renderStoryList(markets, 'details-markets-list', 'story-dot-market');
+    document.getElementById('details-markets').style.display = '';
   } else {
-    mkEl.style.display = 'none';
+    document.getElementById('details-markets').style.display = 'none';
   }
 
-  if (!geo.length && !markets.length) {
+  if (!geo.length && !tech.length && !markets.length) {
     showDetailsEmpty('No stories recorded for this episode.');
   }
 }
-
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-const TOPIC_LABELS = {
-  usa_china:    'US–China',
-  usa_europe:   'US–Europe',
-  tech_ai:      'Tech & AI',
-  usa_denmark:  'US–Denmark',
-  europe_china: 'Europe–China',
-  supply_chain: 'Supply Chain',
-  energy_geo:   'Energy',
-  other:        'World',
-};
-function topicLabel(t) { return TOPIC_LABELS[t] || t; }
 
 /* ── Archive list ────────────────────────────────────────────── */
 function renderList() {
@@ -894,7 +903,7 @@ async function openSettings() {
   const biometricEnabled = localStorage.getItem('carmen_biometric_enabled') === '1';
   if (biometricEnabled) {
     const ok = await webauthnVerify();
-    if (!ok) return; // biometric denied / cancelled — don't open
+    if (!ok) return;
   }
   _showSettings();
 }
@@ -917,10 +926,8 @@ function toggleAccordion(id) {
   const header  = document.getElementById(`acc-${id}`);
   const content = document.getElementById(`acc-content-${id}`);
   const isOpen  = content.classList.contains('open');
-  // Close all
   document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('open'));
   document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('open'));
-  // Open this one (unless it was already open)
   if (!isOpen) {
     header.classList.add('open');
     content.classList.add('open');
@@ -929,19 +936,18 @@ function toggleAccordion(id) {
 
 /* ── WebAuthn biometric ──────────────────────────────────────── */
 function _supportsWebAuthn() {
-  return window.PublicKeyCredential !== undefined
-    && navigator.credentials !== undefined;
+  return window.PublicKeyCredential !== undefined && navigator.credentials !== undefined;
 }
 
 function syncBiometricUI() {
-  const enabled    = localStorage.getItem('carmen_biometric_enabled') === '1';
-  const credId     = localStorage.getItem('carmen_biometric_cred');
-  const toggle     = document.getElementById('biometric-toggle');
-  const enrollBtn  = document.getElementById('biometric-enroll-btn');
-  const statusMsg  = document.getElementById('biometric-status');
+  const enabled   = localStorage.getItem('carmen_biometric_enabled') === '1';
+  const credId    = localStorage.getItem('carmen_biometric_cred');
+  const toggle    = document.getElementById('biometric-toggle');
+  const enrollBtn = document.getElementById('biometric-enroll-btn');
+  const statusMsg = document.getElementById('biometric-status');
 
   if (!_supportsWebAuthn()) {
-    toggle.disabled  = true;
+    toggle.disabled = true;
     statusMsg.textContent = 'Biometric authentication is not supported on this device.';
     enrollBtn.style.display = 'none';
     return;
@@ -964,12 +970,10 @@ function syncBiometricUI() {
 
 function handleBiometricToggle(checkbox) {
   if (checkbox.checked) {
-    // Show enroll button — actual enrollment happens on button tap
     localStorage.setItem('carmen_biometric_enabled', '1');
     document.getElementById('biometric-enroll-btn').style.display = 'block';
     document.getElementById('biometric-status').textContent = 'Tap below to register your biometric.';
   } else {
-    // Disable — clear stored credential
     localStorage.removeItem('carmen_biometric_enabled');
     localStorage.removeItem('carmen_biometric_cred');
     syncBiometricUI();
@@ -989,33 +993,24 @@ function _fromB64url(str) {
 async function enrollBiometric() {
   const challenge = crypto.getRandomValues(new Uint8Array(32));
   const userId    = crypto.getRandomValues(new Uint8Array(16));
-
   try {
     const cred = await navigator.credentials.create({
       publicKey: {
         challenge,
-        rp: {
-          id:   window.location.hostname,
-          name: 'Carmen Briefing',
-        },
-        user: {
-          id:          userId,
-          name:        'carmen-user',
-          displayName: 'Carmen User',
-        },
+        rp: { id: window.location.hostname, name: 'Carmen Briefing' },
+        user: { id: userId, name: 'carmen-user', displayName: 'Carmen User' },
         pubKeyCredParams: [
-          { type: 'public-key', alg: -7  }, // ES256
-          { type: 'public-key', alg: -257 }, // RS256 fallback
+          { type: 'public-key', alg: -7   },
+          { type: 'public-key', alg: -257 },
         ],
         authenticatorSelection: {
           authenticatorAttachment: 'platform',
-          requireResidentKey:      false,
-          userVerification:        'required',
+          requireResidentKey: false,
+          userVerification: 'required',
         },
         timeout: 60000,
       },
     });
-
     localStorage.setItem('carmen_biometric_cred', _b64url(cred.rawId));
     localStorage.setItem('carmen_biometric_enabled', '1');
     document.getElementById('biometric-status').textContent = 'Biometric enrolled successfully! ✓';
@@ -1023,35 +1018,26 @@ async function enrollBiometric() {
     setTimeout(syncBiometricUI, 1500);
   } catch (e) {
     document.getElementById('biometric-status').textContent =
-      e.name === 'NotAllowedError'
-        ? 'Enrollment cancelled.'
-        : `Enrollment failed: ${e.message}`;
+      e.name === 'NotAllowedError' ? 'Enrollment cancelled.' : `Enrollment failed: ${e.message}`;
   }
 }
 
 async function webauthnVerify() {
   const credId = localStorage.getItem('carmen_biometric_cred');
-  if (!credId) return true; // no credential stored yet — allow through
-
+  if (!credId) return true;
   const challenge = crypto.getRandomValues(new Uint8Array(32));
-
   try {
     await navigator.credentials.get({
       publicKey: {
         challenge,
-        allowCredentials: [{
-          type: 'public-key',
-          id:   _fromB64url(credId),
-        }],
+        allowCredentials: [{ type: 'public-key', id: _fromB64url(credId) }],
         userVerification: 'required',
-        timeout:           60000,
+        timeout: 60000,
       },
     });
     return true;
   } catch (e) {
-    if (e.name !== 'NotAllowedError') {
-      console.warn('WebAuthn verify:', e.name, e.message);
-    }
+    if (e.name !== 'NotAllowedError') console.warn('WebAuthn verify:', e.name, e.message);
     return false;
   }
 }
@@ -1068,7 +1054,6 @@ async function init() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 
-  // A2HS prompt (Safari only)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   const isSafari     = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
   const dismissed    = localStorage.getItem('a2hs_dismissed');
@@ -1076,7 +1061,6 @@ async function init() {
     document.getElementById('a2hs').style.display = 'block';
   }
 
-  // Load episode index
   try {
     const resp = await fetch('../episodes/index.json?v=' + Date.now());
     if (!resp.ok) throw new Error('no index');
@@ -1104,9 +1088,11 @@ async function init() {
     audio.src   = `../episodes/${ep.filename}`;
     activeIndex = startIdx;
     renderList();
+
+    // Load details for the default episode right away
+    loadDetails(ep);
   }
 
-  // Service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
