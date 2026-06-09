@@ -1,0 +1,221 @@
+{
+  "date": "2026-06-09",
+  "title": "Carmen's Briefing — Tuesday 9 June",
+  "duration_seconds": 572,
+  "geo_stories": [
+    {
+      "headline": "NATO�s Digital Back End Could Fall Apart Without Change",
+      "summary_snippet": "Shared standards on cloud services are urgently needed.",
+      "source_url": "https://foreignpolicy.com/2026/06/09/nato-cloud-computer-ai-iran-war/",
+      "topic": [
+        "us_europe"
+      ],
+      "score": 7,
+      "watchlist_flag": false,
+      "watchlist_note": ""
+    },
+    {
+      "headline": "Iran, Israel Pull Back From Brink After Trading Fire",
+      "summary_snippet": "But another Israeli assault on Beirut could collapse the two sides� fragile truce.",
+      "source_url": "https://foreignpolicy.com/2026/06/08/iran-israel-attacks-lebanon-hezbollah-beirut-us-trump-netanyahu/",
+      "topic": [
+        "us_china"
+      ],
+      "score": 6,
+      "watchlist_flag": false,
+      "watchlist_note": ""
+    },
+    {
+      "headline": "EU chief diplomat eyes sanctions on Russian metals, adding to pressure on Irish refinery",
+      "summary_snippet": "Kaja Kallas made the comments in Dublin � where the Irish are in the spotlight over a Limerick plant that ships the key ingredient for aluminum to Russia.",
+      "source_url": "https://www.politico.eu/article/kaja-kallas-russia-sanctions-metal-oil-ireland/?utm_source=RSS_Feed&utm_medium=RSS&utm_campaign=RSS_Syndication",
+      "topic": [
+        "global_trade"
+      ],
+      "score": 6,
+      "watchlist_flag": true,
+      "watchlist_note": "Meta may be directly affected by this development."
+    }
+  ],
+  "tech_stories": [
+    {
+      "headline": "Can tech companies learn to love cheaper AI models?",
+      "summary_snippet": "If those same AI workloads can be�handled by�cheaper models without affecting quality, it would mean a massive shift in the economics of�AI.",
+      "source_url": "https://techcrunch.com/2026/06/09/can-tech-companies-learn-to-love-cheaper-models/",
+      "topic": [
+        "ai_core"
+      ],
+      "score": 6,
+      "watchlist_flag": false,
+      "watchlist_note": ""
+    },
+    {
+      "headline": "CISA gives US federal agencies three days to fix a VPN bug under attack by a ransomware gang",
+      "summary_snippet": "Check Point said hackers broke into dozens of organizations by exploiting a VPN bug in several of its products used across the government.",
+      "source_url": "https://techcrunch.com/2026/06/09/cisa-gives-us-federal-agencies-three-days-to-fix-a-vpn-bug-under-attack-by-a-ransomware-gang/",
+      "topic": [
+        "cyber"
+      ],
+      "score": 6,
+      "watchlist_flag": false,
+      "watchlist_note": ""
+    },
+    {
+      "headline": "How an e-scooter founder raised $5 million to build space data centers",
+      "summary_snippet": "Orbital founder Euwyn Poon built 250,000 scooters at Spin. Now he wants to launch 10,000 space data centers.",
+      "source_url": "https://techcrunch.com/2026/06/09/how-an-e-scooter-founder-raised-5-million-to-build-space-data-centers/",
+      "topic": [
+        "infrastructure"
+      ],
+      "score": 6,
+      "watchlist_flag": false,
+      "watchlist_note": ""
+    }
+  ],
+  "market_stories": [
+    {
+      "headline": "Micron Appoints�Alexis Black Bj�rlin to Board of Directors",
+      "summary_snippet": "BOISE, Idaho, June 09, 2026 (GLOBE NEWSWIRE) -- Micron Technology, Inc. (Nasdaq: MU) today announced the appointment of Dr. Alexis Black Bj�rlin to its board of directors. Dr. Bj�rlin is a highly accomplished technology executive with deep experience spanning artificial intelligence infrastructure, cloud platforms, semiconductors, networking and optical systems. She is currently Chief Strategy Officer at General Catalyst. Previously, Dr. Bj�rlin served as senior vice president and general manage",
+      "source_url": "https://finance.yahoo.com/sectors/technology/articles/micron-appoints-alexis-black-bj-200500417.html?.tsrc=rss",
+      "ticker": "NVDA",
+      "name": "",
+      "tier": 1,
+      "score": 6
+    },
+    {
+      "headline": "Stocks making big moves yesterday: Marvell Technology, Intel, Teradyne, JFrog, and Tesla",
+      "summary_snippet": "Check out the companies making headlines yesterday:",
+      "source_url": "https://finance.yahoo.com/markets/stocks/articles/stocks-making-big-moves-yesterday-200614526.html?.tsrc=rss",
+      "ticker": "GOOGL",
+      "name": "",
+      "tier": 1,
+      "score": 6
+    },
+    {
+      "headline": "Stocks making big moves yesterday: Marvell Technology, Intel, Teradyne, JFrog, and Tesla",
+      "summary_snippet": "Check out the companies making headlines yesterday:",
+      "source_url": "https://finance.yahoo.com/markets/stocks/articles/stocks-making-big-moves-yesterday-200614526.html?.tsrc=rss",
+      "ticker": "TSLA",
+      "name": "",
+      "tier": 1,
+      "score": 5
+    },
+    {
+      "headline": "Arista Networks vs. AudioCodes: Which Technology Stock Is a Better Buy in 2026?",
+      "summary_snippet": "One company powers AI-driven cloud giants, while the other anchors enterprise voice worldwide. Examine their fundamentals, risk, and valuation head-to-head.",
+      "source_url": "https://www.fool.com/coverage/better-buy/2026/06/09/arista-networks-vs-audiocodes-which-technology-stock-is-a-better-buy-in-2026/?.tsrc=rss",
+      "ticker": "MSFT",
+      "name": "",
+      "tier": 1,
+      "score": 5
+    },
+    {
+      "headline": "Elon Musk Says He�s Building a Chip �2 to 3 Times� Better Than NVIDIA at 10% The Cost. Is He Bluffing?",
+      "summary_snippet": "Tesla (NASDAQ:TSLA) CEO Elon Musk dropped a striking claim during a recent conversation with Baron Capital founder Ron Baron, circulated widely after being posted to X by @carm1nee. Musk said he is building a chip that will be �two to three times better than NVIDIA� at 10% of the cost, with a specific focus on ... Elon Musk Says He�s Building a Chip �2 to 3 Times� Better Than NVIDIA at 10% The Cost. Is He Bluffing?",
+      "source_url": "https://247wallst.com/investing/2026/06/09/elon-musk-says-hes-building-a-chip-2-to-3-times-better-than-nvidia-at-10-the-cost-is-he-bluffing/?.tsrc=rss",
+      "ticker": "TSM",
+      "name": "",
+      "tier": 1,
+      "score": 5
+    },
+    {
+      "headline": "Can PLTR Stock Live Up To Its Multiple?",
+      "summary_snippet": "This is a demand-constrained year for Palantir Technologies. The company's Artificial Intelligence Platform is pitched as the only reliable option for its core government and industrial customers.",
+      "source_url": "https://www.trefis.com/articles/602076/can-pltr-stock-live-up-to-its-multiple-2/2026-06-09?.tsrc=rss",
+      "ticker": "PLTR",
+      "name": "",
+      "tier": 1,
+      "score": 5
+    },
+    {
+      "headline": "Can IREN's 800MW Australia Campus Help Meet Rising APAC AI Demand?",
+      "summary_snippet": "IREN Limited is expanding into Australia with an 800MW data center campus designed to support growing AI infrastructure demand across Asia-Pacific.",
+      "source_url": "https://finance.yahoo.com/sectors/technology/articles/irens-800mw-australia-campus-help-141700397.html?.tsrc=rss",
+      "ticker": "IREN",
+      "name": "",
+      "tier": 1,
+      "score": 4
+    },
+    {
+      "headline": "Cipher Digital turns to debt market to fund data center growth",
+      "summary_snippet": "Cipher Digital Inc (NASDAQ:CIFR) plans to raise $810 million through a private offering of senior secured notes due 2031, issued by a subsidiary, to back its data center operations. The notes will be offered by Stingray Compute LLC, a wholly owned subsidiary of Cipher, to qualified...",
+      "source_url": "https://www.proactiveinvestors.com/companies/news/1093671/cipher-digital-turns-to-debt-market-to-fund-data-center-growth-1093671.html?.tsrc=rss",
+      "ticker": "CIFR",
+      "name": "",
+      "tier": 1,
+      "score": 4
+    },
+    {
+      "headline": "Micron Appoints�Alexis Black Bj�rlin to Board of Directors",
+      "summary_snippet": "BOISE, Idaho, June 09, 2026 (GLOBE NEWSWIRE) -- Micron Technology, Inc. (Nasdaq: MU) today announced the appointment of Dr. Alexis Black Bj�rlin to its board of directors. Dr. Bj�rlin is a highly accomplished technology executive with deep experience spanning artificial intelligence infrastructure, cloud platforms, semiconductors, networking and optical systems. She is currently Chief Strategy Officer at General Catalyst. Previously, Dr. Bj�rlin served as senior vice president and general manage",
+      "source_url": "https://finance.yahoo.com/sectors/technology/articles/micron-appoints-alexis-black-bj-200500417.html?.tsrc=rss",
+      "ticker": "META",
+      "name": "",
+      "tier": 2,
+      "score": 7
+    },
+    {
+      "headline": "Micron Appoints�Alexis Black Bj�rlin to Board of Directors",
+      "summary_snippet": "BOISE, Idaho, June 09, 2026 (GLOBE NEWSWIRE) -- Micron Technology, Inc. (Nasdaq: MU) today announced the appointment of Dr. Alexis Black Bj�rlin to its board of directors. Dr. Bj�rlin is a highly accomplished technology executive with deep experience spanning artificial intelligence infrastructure, cloud platforms, semiconductors, networking and optical systems. She is currently Chief Strategy Officer at General Catalyst. Previously, Dr. Bj�rlin served as senior vice president and general manage",
+      "source_url": "https://finance.yahoo.com/sectors/technology/articles/micron-appoints-alexis-black-bj-200500417.html?.tsrc=rss",
+      "ticker": "MU",
+      "name": "",
+      "tier": 2,
+      "score": 7
+    },
+    {
+      "headline": "Apple's AI News Underwhelms. Siri AI Release Concerns Persist.",
+      "summary_snippet": "Apple's AI news failed to excite investors as the consumer electronics giant is seen playing catch-up.",
+      "source_url": "https://finance.yahoo.com/m/9b92e5d3-b459-3606-99c2-ee2415663b82/apple%27s-ai-news-underwhelms..html?.tsrc=rss",
+      "ticker": "AAPL",
+      "name": "",
+      "tier": 2,
+      "score": 6
+    },
+    {
+      "headline": "Micron Appoints�Alexis Black Bj�rlin to Board of Directors",
+      "summary_snippet": "BOISE, Idaho, June 09, 2026 (GLOBE NEWSWIRE) -- Micron Technology, Inc. (Nasdaq: MU) today announced the appointment of Dr. Alexis Black Bj�rlin to its board of directors. Dr. Bj�rlin is a highly accomplished technology executive with deep experience spanning artificial intelligence infrastructure, cloud platforms, semiconductors, networking and optical systems. She is currently Chief Strategy Officer at General Catalyst. Previously, Dr. Bj�rlin served as senior vice president and general manage",
+      "source_url": "https://finance.yahoo.com/sectors/technology/articles/micron-appoints-alexis-black-bj-200500417.html?.tsrc=rss",
+      "ticker": "AVGO",
+      "name": "",
+      "tier": 2,
+      "score": 6
+    },
+    {
+      "headline": "Sector Update: Tech Stocks Fall Tuesday Afternoon",
+      "summary_snippet": "Tech stocks were sharply lower Tuesday afternoon, with the State Street Technology Select Sector SPD",
+      "source_url": "https://finance.yahoo.com/markets/stocks/articles/sector-tech-stocks-fall-tuesday-173239537.html?.tsrc=rss",
+      "ticker": "CRWV",
+      "name": "",
+      "tier": 2,
+      "score": 5
+    },
+    {
+      "headline": "Sector Update: Tech Stocks Fall Late Afternoon",
+      "summary_snippet": "Tech stocks were lower late Tuesday afternoon, with the State Street Technology Select Sector SPDR E",
+      "source_url": "https://finance.yahoo.com/markets/stocks/articles/sector-tech-stocks-fall-afternoon-192913782.html?.tsrc=rss",
+      "ticker": "AMZN",
+      "name": "",
+      "tier": 2,
+      "score": 5
+    },
+    {
+      "headline": "A16z, Paradigm and Ribbit Back Morpho in $175 Million Credit Market Round",
+      "summary_snippet": "Morpho Association has raised $175 million in one of DeFi�s largest funding rounds, giving the onchain credit...",
+      "source_url": "https://www.cryptoprowl.com/releases/a16z-paradigm-and-ribbit-back-morpho-in-175-million-credit-market-round-5818?.tsrc=rss",
+      "ticker": "COIN",
+      "name": "",
+      "tier": 2,
+      "score": 5
+    },
+    {
+      "headline": "MP Materials: Buy, Sell, or Hold?",
+      "summary_snippet": "MP Materials has seen its stock surge over the last year. Is this rare-earth miner still a buy in 2026?",
+      "source_url": "https://www.fool.com/investing/2026/06/09/mp-materials-buy-sell-or-hold/?.tsrc=rss",
+      "ticker": "MP",
+      "name": "",
+      "tier": 3,
+      "score": 6
+    }
+  ]
+}

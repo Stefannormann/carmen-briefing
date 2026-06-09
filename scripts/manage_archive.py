@@ -52,26 +52,39 @@ def _write_sidecar(ep_stem: str, duration: int, title: str, tmp_meta: dict | Non
     """Write episodes/YYYY-MM-DD.json sidecar if not already present."""
     sidecar_path = EPISODES_DIR / f"{ep_stem}.json"
     if sidecar_path.exists():
-        # Update duration in existing sidecar if it's 0
         try:
             existing = json.loads(sidecar_path.read_text(encoding="utf-8"))
-            if existing.get("duration_seconds", 0) == 0 and duration > 0:
+            needs_update = existing.get("duration_seconds", 0) == 0 and duration > 0
+            # Overwrite a minimal (empty-story) sidecar if we now have real metadata
+            is_minimal = (
+                not existing.get("geo_stories") and
+                not existing.get("tech_stories") and
+                not existing.get("market_stories")
+            )
+            has_real_meta = tmp_meta and tmp_meta.get("date") == ep_stem
+            if needs_update and not has_real_meta:
                 existing["duration_seconds"] = duration
                 sidecar_path.write_text(
                     json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8"
                 )
                 print(f"  Updated duration in sidecar → {sidecar_path.name}")
+                return
+            if not (is_minimal and has_real_meta):
+                # Sidecar is fine as-is
+                return
         except Exception:
             pass
-        return
+        # Fall through to overwrite the minimal sidecar with real data
 
     # Build sidecar from today's tmp metadata (only matches same date)
     if tmp_meta and tmp_meta.get("date") == ep_stem:
+        geo = tmp_meta.get("geo_stories") or tmp_meta.get("strategic_stories") or []
         sidecar = {
             "date":             ep_stem,
             "title":            title,
             "duration_seconds": duration,
-            "geo_stories":      tmp_meta.get("geo_stories", []),
+            "geo_stories":      geo,
+            "tech_stories":     tmp_meta.get("tech_stories", []),
             "market_stories":   tmp_meta.get("market_stories", []),
         }
         sidecar_path.write_text(

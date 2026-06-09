@@ -1,20 +1,23 @@
 [
   {
+    "date": "2026-06-09",
+    "filename": "2026-06-09.mp3",
+    "title": "Carmen's Briefing — Tuesday 9 June",
+    "duration_seconds": 572,
+    "metadata": "2026-06-09.json"
+  },
+  {
     "date": "2026-05-28",
     "filename": "2026-05-28.mp3",
-    "title": "Carmen's Briefing â€” Thursday 28 May",
-    "duration_seconds": 930
+    "title": "Carmen's Briefing — Thursday 28 May",
+    "duration_seconds": 930,
+    "metadata": "2026-05-28.json"
   },
   {
     "date": "2026-05-27",
     "filename": "2026-05-27.mp3",
-    "title": "Carmen's Briefing â€” Wednesday 27 May",
-    "duration_seconds": 519
-  },
-  {
-    "date": "2026-05-26",
-    "filename": "2026-05-26.mp3",
-    "title": "Carmen's Briefing â€” Tuesday 26 May",
-    "duration_seconds": 490
+    "title": "Carmen's Briefing — Wednesday 27 May",
+    "duration_seconds": 519,
+    "metadata": "2026-05-27.json"
   }
 ]
