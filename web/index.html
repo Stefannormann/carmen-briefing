@@ -61,6 +61,7 @@
     @media (min-width: 900px) {
       .page-wrap {
         flex-direction: row;
+        flex-wrap: wrap;
         align-items: flex-start;
         justify-content: center;
         gap: 28px;
@@ -308,7 +309,7 @@
     .story-dot-tech   { background: var(--purple); }
     .story-dot-market { background: var(--gold); }
 
-    .story-text { flex: 1; }
+    .story-text { flex: 1; overflow-wrap: break-word; min-width: 0; }
     .story-headline {
       font-size: 0.86rem;
       color: var(--text);
