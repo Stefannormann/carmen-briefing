@@ -114,7 +114,7 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
             "maxOutputTokens": 16384,
         },
     }
-    retries = 4
+    retries = 8
     for attempt in range(1, retries + 1):
         try:
             resp = requests.post(
@@ -124,7 +124,7 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
                 timeout=120,
             )
             if resp.status_code in (429, 503, 529) and attempt < retries:
-                wait = 10 * attempt
+                wait = min(30 * (2 ** (attempt - 1)), 300)  # 30s, 60s, 120s, 240s, 300s cap
                 print(f"  Gemini {resp.status_code} — retrying in {wait}s (attempt {attempt}/{retries})…")
                 time.sleep(wait)
                 continue
@@ -139,7 +139,7 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
             return text
         except requests.exceptions.ReadTimeout:
             if attempt < retries:
-                wait = 15 * attempt
+                wait = min(30 * (2 ** (attempt - 1)), 300)
                 print(f"  Gemini timeout — retrying in {wait}s (attempt {attempt}/{retries})…")
                 time.sleep(wait)
             else:
