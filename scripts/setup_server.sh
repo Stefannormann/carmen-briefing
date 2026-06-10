@@ -50,6 +50,7 @@ echo "[6/8] Setting up environment file..."
 if [ ! -f "$CARMEN_DIR/.env" ]; then
     cat > "$CARMEN_DIR/.env" << 'ENVEOF'
 GEMINI_API_KEY=REPLACE_WITH_YOUR_KEY
+OPENAI_API_KEY=REPLACE_WITH_YOUR_KEY
 ENVEOF
     chmod 600 "$CARMEN_DIR/.env"
     echo "    Created $CARMEN_DIR/.env"
@@ -143,10 +144,13 @@ echo ""
 echo " 1. Add your Gemini API key:"
 echo "    nano /opt/carmen/.env"
 echo ""
-echo " 2. Add the daily cron job:"
+echo " 2. Add the daily cron jobs:"
 echo "    crontab -e"
-echo "    Add this line:"
+echo "    Add these lines (server is Europe/Helsinki = EEST = UTC+3):"
+echo "    # Main run: 07:00 EEST = 06:00 CEST (Denmark local time)"
 echo "    0 7 * * * /opt/carmen/run_briefing.sh"
+echo "    # Catch-up: re-run at 09:00 EEST (08:00 Denmark) if today's episode is missing"
+echo "    0 9 * * * [ -f /opt/carmen/episodes/\$(date +\%Y-\%m-\%d).mp3 ] || /opt/carmen/run_briefing.sh"
 echo ""
 echo " 3. Run a manual test:"
 echo "    /opt/carmen/run_briefing.sh"
