@@ -23,6 +23,10 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_MODEL = "gpt-4o-mini"
+
 TMP_DIR = Path("tmp")
 SCRIPT_FILE       = TMP_DIR / "script.txt"
 SEGMENTS_FILE     = TMP_DIR / "segments.json"
@@ -147,6 +151,57 @@ def gemini_call(prompt: str, dry_run: bool = False) -> str:
     raise RuntimeError("Gemini call failed after all retries")
 
 
+def openai_call(prompt: str) -> str:
+    """Fallback to OpenAI GPT when Gemini is unavailable."""
+    if not OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY not set — cannot use OpenAI fallback.")
+    payload = {
+        "model": OPENAI_MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": prompt},
+        ],
+        "temperature": 0.7,
+        "max_tokens": 4096,
+    }
+    retries = 4
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.post(
+                OPENAI_URL,
+                headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+                json=payload,
+                timeout=120,
+            )
+            if resp.status_code in (429, 503) and attempt < retries:
+                wait = 30 * attempt
+                print(f"  OpenAI {resp.status_code} — retrying in {wait}s (attempt {attempt}/{retries})…")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["choices"][0]["message"]["content"]
+            print(f"  OpenAI fallback succeeded ({len(text)} chars).")
+            return text
+        except requests.exceptions.ReadTimeout:
+            if attempt < retries:
+                time.sleep(30 * attempt)
+            else:
+                raise
+    raise RuntimeError("OpenAI fallback also failed after all retries")
+
+
+def llm_call(prompt: str, dry_run: bool = False) -> str:
+    """Call Gemini; fall back to OpenAI if Gemini is persistently unavailable."""
+    try:
+        return gemini_call(prompt, dry_run)
+    except Exception as gemini_err:
+        if dry_run:
+            raise
+        print(f"  Gemini exhausted ({gemini_err}). Trying OpenAI fallback…", file=sys.stderr)
+        return openai_call(prompt)
+
+
 def enforce_tier_diversity(all_stories: list[dict], prioritised: list[dict]) -> list[dict]:
     """
     Guarantee at least one Tier 2 and one Tier 3 company in the final feed.
@@ -234,7 +289,7 @@ def main():
     )
 
     print("Generating Carmen's script via Gemini…")
-    script = gemini_call(prompt, args.dry_run)
+    script = llm_call(prompt, args.dry_run)
 
     SCRIPT_FILE.write_text(script, encoding="utf-8")
     print(f"Script saved → {SCRIPT_FILE} ({len(script)} chars)")
