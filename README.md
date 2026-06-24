@@ -230,6 +230,45 @@ WATCHLIST = {
 |---|---|---|---|
 | Intro jingle | 273159 — "Podcast Jingle" by plasterbrain | CC0 | https://freesound.org/s/273159/ |
 | Transition tone | 333694 — "Thin Bell Ding 3" by Khrinx | CC0 | https://freesound.org/s/333694/ |
+| Ambient background | 387588 — "Piano Ambiance 4 (120bpm)" by Erokia | CC0 | https://freesound.org/s/387588/ |
+
+The ambient track is downloaded automatically by `download_audio_assets.py` alongside
+the other assets (requires `FREESOUND_API_KEY`). Episodes generate fine without it —
+the ambient step is skipped gracefully if `audio/ambient.mp3` is not present.
+
+---
+
+## Audio quality tuning
+
+All audio parameters are defined as named constants — no magic numbers buried in logic.
+
+### SSML and speech synthesis (`synthesise_audio.py`)
+
+| Constant | Default | Effect |
+|---|---|---|
+| `CARMEN_RATE` | `-6%` | Speech speed. Increase toward `0%` if too slow, `-10%` for more deliberate pacing. |
+| `CARMEN_PITCH` | `+0Hz` | Voice pitch. Leave at `0` unless the voice sounds unnatural. |
+| `TRANSITION_BREAK_MS` | `800` | SSML pause (ms) between any inline `---TRANSITION---` markers surviving into segments. |
+| `PARAGRAPH_BREAK_MS` | `400` | SSML pause (ms) inserted at `\n\n` paragraph breaks within a segment. |
+
+### EQ and compression (`stitch_audio.py`)
+
+| Constant | Default | Effect |
+|---|---|---|
+| `EQ_FREQUENCY` | `100` Hz | Centre frequency of the bass-boost EQ band. |
+| `EQ_WIDTH` | `2` octaves | Bandwidth of the boost. Narrower = more focused; wider = broader warmth. |
+| `EQ_GAIN_DB` | `+3` dB | Boost amount. Reduce to `1` if the output sounds too muddy. |
+| `AMBIENT_VOLUME_DB` | `-25` dB | Background music level below episode. `-20` louder, `-30` quieter. |
+| `AMBIENT_FADE_MS` | `3000` ms | Duration of ambient fade-in and fade-out. |
+
+### Punctuation formatting (`generate_script.py`)
+
+The `format_for_tts()` function post-processes the LLM script before segmenting:
+- Commas after 4+ character words are replaced with em-dashes for longer natural pauses.
+- Reveal-style verbs (`is`, `are`, `was`, `means`, `signals`, `suggests`) gain an ellipsis before capitalized words for dramatic effect.
+- Sentences longer than 20 words are broken at the first conjunction (`and`, `but`, `which`, `because`, `however`).
+
+These rules run automatically on every episode. To disable one, comment out the relevant `re.sub` call in `format_for_tts()`.
 
 ---
 

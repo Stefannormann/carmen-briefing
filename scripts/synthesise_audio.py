@@ -15,13 +15,16 @@ from pathlib import Path
 
 import edge_tts
 
-# Voice configuration — change CARMEN_VOICE to switch accents:
+# ── Voice and SSML tuning constants ──────────────────────────────────────────
+# Change CARMEN_VOICE to switch accent:
 #   en-US-AriaNeural       (American English, warm)
 #   en-GB-SoniaNeural      (British English)
 #   en-AU-NatashaNeural    (Australian English)
-CARMEN_VOICE = "en-US-AriaNeural"
-CARMEN_RATE  = "+0%"    # Try "+5%" for slightly faster delivery
-CARMEN_PITCH = "+0Hz"
+CARMEN_VOICE         = "en-US-AriaNeural"
+CARMEN_RATE          = "-6%"     # Slightly slower than default; increase toward 0% if too slow
+CARMEN_PITCH         = "+0Hz"    # Leave at 0 unless voice sounds unnatural
+TRANSITION_BREAK_MS  = 800       # SSML pause replacing any inline ---TRANSITION--- markers
+PARAGRAPH_BREAK_MS   = 400       # SSML pause between paragraph breaks (\n\n)
 
 TMP_DIR = Path("tmp")
 SEGMENTS_JSON = TMP_DIR / "segments.json"
@@ -38,8 +41,35 @@ def clean_for_speech(text: str) -> str:
     return MARKDOWN_ARTIFACTS.sub("", text)
 
 
+def wrap_in_ssml(
+    text: str,
+    voice: str = CARMEN_VOICE,
+    rate: str  = CARMEN_RATE,
+    pitch: str = CARMEN_PITCH,
+) -> str:
+    """Wrap cleaned segment text in SSML for edge-tts synthesis."""
+    # Safety net: convert any surviving ---TRANSITION--- markers to SSML breaks
+    text = text.replace("---TRANSITION---", f'<break time="{TRANSITION_BREAK_MS}ms"/>')
+    # Convert paragraph breaks to medium pauses
+    text = text.replace("\n\n", f'<break time="{PARAGRAPH_BREAK_MS}ms"/>')
+    # Single newlines become a short pause
+    text = text.replace("\n", " ")
+
+    return (
+        f'<speak version="1.0" '
+        f'xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">'
+        f'<voice name="{voice}">'
+        f'<prosody rate="{rate}" pitch="{pitch}">'
+        f'{text}'
+        f'</prosody>'
+        f'</voice>'
+        f'</speak>'
+    )
+
+
 async def synthesise_segment(text: str, out_path: Path) -> None:
-    communicate = edge_tts.Communicate(text, CARMEN_VOICE, rate=CARMEN_RATE, pitch=CARMEN_PITCH)
+    ssml = wrap_in_ssml(text)
+    communicate = edge_tts.Communicate(ssml, CARMEN_VOICE, ssml=True)
     await communicate.save(str(out_path))
 
 

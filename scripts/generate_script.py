@@ -9,6 +9,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from datetime import date
@@ -38,6 +39,35 @@ METADATA_FILE     = TMP_DIR / "episode_metadata.json"
 
 TRANSITION_MARKER = "---TRANSITION---"
 
+
+def format_for_tts(text: str) -> str:
+    """
+    Post-process the LLM script to improve naturalness for edge-tts synthesis.
+    Applied after LLM generation, before segmenting on TRANSITION_MARKER.
+    """
+    # 1. Replace comma-heavy pauses with em-dashes for longer natural breaks.
+    #    Targets commas that follow words of 4+ characters.
+    text = re.sub(r'(\w{4,}),\s', r'\1 — ', text)
+
+    # 2. Add ellipsis before reveal-style words for dramatic pacing.
+    #    e.g. "The answer is China" → "The answer is... China"
+    text = re.sub(r'\b(is|are|was|were|means|signals|suggests)\s+([A-Z])', r'\1... \2', text)
+
+    # 3. Break sentences longer than 20 words at natural conjunction points.
+    sentences = text.split('. ')
+    formatted = []
+    for sentence in sentences:
+        words = sentence.split()
+        if len(words) > 20:
+            sentence = re.sub(
+                r'\s+(and|but|which|because|however)\s+', r'. \1 ', sentence, count=1
+            )
+        formatted.append(sentence)
+    text = '. '.join(formatted)
+
+    return text
+
+
 SYSTEM_PROMPT = """\
 You are a professional radio script writer for a daily morning news briefing podcast.
 The host is Carmen — a warm, engaging, professional female journalist who speaks
@@ -48,6 +78,12 @@ she speaks in natural, flowing, broadcaster sentences.
 Write the complete spoken script for today's episode.
 Do NOT include stage directions, sound cues, or production notes.
 Write only Carmen's spoken words.
+
+WRITING STYLE — RADIO FORMATTING:
+- Prefer short, punchy sentences. Target 12–15 words maximum per sentence.
+- Use em-dashes (—) rather than commas where a longer pause would feel natural on radio.
+- Never chain more than two clauses with commas in a single sentence.
+- Vary sentence length deliberately — short sentences land harder after longer ones.
 
 STRUCTURE:
 
@@ -346,6 +382,7 @@ def main():
 
     print("Generating Carmen's script via Gemini…")
     script = llm_call(prompt, args.dry_run)
+    script = format_for_tts(script)
 
     SCRIPT_FILE.write_text(script, encoding="utf-8")
     print(f"Script saved → {SCRIPT_FILE} ({len(script)} chars)")

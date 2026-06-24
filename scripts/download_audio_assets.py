@@ -24,12 +24,21 @@ ASSETS = [
         "sound_id": 273159,
         "out_path": AUDIO_DIR / "jingle.mp3",
         "attribution": "Podcast Jingle by plasterbrain — freesound.org/s/273159/ (CC0)",
+        "required": True,
     },
     {
         "label": "Transition tone",
         "sound_id": 333694,
         "out_path": AUDIO_DIR / "transition.mp3",
         "attribution": "Thin Bell Ding 3 by Khrinx — freesound.org/s/333694/ (CC0)",
+        "required": True,
+    },
+    {
+        "label": "Ambient background music",
+        "sound_id": 387588,
+        "out_path": AUDIO_DIR / "ambient.mp3",
+        "attribution": "Piano Ambiance 4 (120bpm) by Erokia — freesound.org/s/387588/ (CC0)",
+        "required": False,  # Episode generates fine without it; adds background warmth
     },
 ]
 
@@ -116,11 +125,20 @@ def main():
     print("Downloading Freesound audio assets…")
     results = [download_asset(a, api_key) for a in ASSETS]
 
-    if all(results):
-        print("\nAll audio assets ready.")
+    required_ok = all(ok for a, ok in zip(ASSETS, results) if a.get("required", True))
+    optional_failed = [a["label"] for a, ok in zip(ASSETS, results)
+                       if not ok and not a.get("required", True)]
+
+    if optional_failed:
+        print(f"\n  Note: optional asset(s) not downloaded: {optional_failed}")
+        print("  Episode will generate without them. See README for setup details.")
+
+    if required_ok:
+        print("\nRequired audio assets ready.")
     else:
-        failed = [a["label"] for a, ok in zip(ASSETS, results) if not ok]
-        print(f"\nERROR: Failed to download: {failed}", file=sys.stderr)
+        failed = [a["label"] for a, ok in zip(ASSETS, results)
+                  if not ok and a.get("required", True)]
+        print(f"\nERROR: Failed to download required assets: {failed}", file=sys.stderr)
         sys.exit(1)
 
 
