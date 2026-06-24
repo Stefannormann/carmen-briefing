@@ -387,7 +387,12 @@ def main():
     args = parser.parse_args()
 
     TMP_DIR.mkdir(exist_ok=True)
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=CUTOFF_HOURS)
+
+    # Monday: extend to 72h to cover the full weekend news gap
+    cutoff_hours = 72 if datetime.now(timezone.utc).weekday() == 0 else CUTOFF_HOURS
+    if cutoff_hours != CUTOFF_HOURS:
+        print(f"Monday detected — using {cutoff_hours}h fetch window.")
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=cutoff_hours)
 
     companies    = get_all_companies()
     all_articles = []

@@ -87,8 +87,8 @@ def _get_keywords(segment: str) -> dict:
 
 # ── Step 1: Fetch RSS ─────────────────────────────────────────────────────────
 
-def fetch_feeds(dry_run: bool = False) -> list[dict]:
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=CUTOFF_HOURS)
+def fetch_feeds(dry_run: bool = False, cutoff_hours: int = CUTOFF_HOURS) -> list[dict]:
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=cutoff_hours)
     articles = []
 
     def parse_feed(url: str, feed_tier: int):
@@ -130,7 +130,7 @@ def fetch_feeds(dry_run: bool = False) -> list[dict]:
     print("Fetching Tier 2 RSS feeds…")
     for url in tier2_feeds:
         parse_feed(url, 2)
-    print(f"Fetched {len(articles)} articles within past {CUTOFF_HOURS}h.")
+    print(f"Fetched {len(articles)} articles within past {cutoff_hours}h.")
     return articles
 
 
@@ -433,7 +433,12 @@ def main():
     print(f"\n=== Fetching: {label} ===")
     TMP_DIR.mkdir(exist_ok=True)
 
-    articles = fetch_feeds(args.dry_run)
+    # Monday: extend to 72h to cover the full weekend news gap
+    fetch_hours = 72 if datetime.now(timezone.utc).weekday() == 0 else 24
+    if fetch_hours != 24:
+        print(f"Monday detected — using {fetch_hours}h fetch window.")
+
+    articles = fetch_feeds(args.dry_run, cutoff_hours=fetch_hours)
     articles = deduplicate(articles)
     articles = gate1_filter(articles, segment)
     articles = tag_topics(articles, segment)

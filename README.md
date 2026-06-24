@@ -1,20 +1,104 @@
 # Carmen Briefing
 
-A fully automated daily audio news briefing delivered as a podcast-style MP3 every morning.
-Built with GitHub Actions, Google Gemini, and edge-tts. No server required.
+A fully automated daily audio news briefing hosted by Carmen — a daily morning podcast covering
+global strategic affairs, AI & tech, and company markets news.
+Episodes are generated on the Hetzner VPS at 06:00 CEST (Denmark local time), Monday–Friday.
+
+---
+
+## Episode schedule
+
+Episodes run **Monday–Friday only**. No episodes are generated on weekends.
+
+| Day | Runs | Fetch window | Duration | Special rules |
+|---|---|---|---|---|
+| Monday | Yes | **72 hours** | Full (~10 min) | Extended window covers Fri–Mon news gap |
+| Tuesday | Yes | 24 hours | **Short (~6 min)** | Shortened format |
+| Wednesday | Yes | 24 hours | **Short (~6 min)** | Shortened format + reduced Tier 2/3 debuff |
+| Thursday | Yes | 24 hours | **Short (~6 min)** | Shortened format |
+| Friday | Yes | 24 hours | **Short (~6 min)** | Shortened format |
+| Saturday | No | — | — | |
+| Sunday | No | — | — | |
+
+### Monday: 72-hour fetch window
+
+Both `fetch_geo_news.py` and `fetch_market_news.py` detect Monday at runtime and extend
+the article lookback window from 24h to **72 hours**, covering Friday through Monday morning
+so no weekend news is missed.
+
+### Tuesday–Friday: 6-minute shortened episodes
+
+On these days, `generate_script.py` applies the following limits before generating the script:
+
+- **Global Strategic Affairs**: max 2 stories
+- **AI & Tech**: max 2 stories
+- **Markets**: candidate pool capped at 7 (vs 15 on Mondays)
+
+The time budget passed to the LLM:
+
+```
+Total target: 6 minutes (360 seconds)
+  Intro + closing:          ~60 s  (fixed)
+  Global Strategic Affairs: N stories × ~90 s
+  AI & Tech:                N stories × ~90 s
+  Markets:                  remaining budget (minimum 60 s)
+```
+
+Carmen is instructed to write tighter sentences and stop when the budget is spent.
+Story counts are capped; no padding is added.
+
+### Wednesday: reduced tier debuff in the markets segment
+
+On Wednesdays, the tier penalty for Tier 2 and Tier 3 companies is reduced by a
+`tier_debuff_multiplier = 0.4`, allowing strong lower-tier stories to compete with
+quieter Tier 1 stories.
+
+**Tier bonus values (used in `watchlist.prioritise_stories`):**
+
+| Tier | Normal | Wednesday (0.4×) |
+|---|---|---|
+| Tier 1 | 30 | 30 (unchanged) |
+| Tier 2 | 20 | 26 |
+| Tier 3 | 10 | 22 |
+
+The `0.4` multiplier is tunable. If Wednesday episodes show too many or too few
+Tier 2/3 stories, adjust the value in `generate_script.py`:
+
+```python
+tier_debuff = 0.4 if is_wednesday else 1.0
+market_stories_sorted = prioritise_stories(market_stories, tier_debuff_multiplier=tier_debuff)
+```
+
+This debuff applies to the **markets segment only**. Macro and tech segment tier
+priorities are unaffected on Wednesdays.
 
 ---
 
 ## Episode structure
 
+**Monday (full):**
+
 | Segment | Duration | Content |
 |---|---|---|
 | Intro jingle | ~5–10 s | Audio asset from Freesound |
 | Carmen's intro | ~30 s | Greeting + story preview |
-| Geopolitical segment | ~4–6 min | 2–3 stories: what happened, why it matters, what to watch |
-| Markets segment | ~4 min | Watchlist company news, prioritised by tier |
+| Global Strategic Affairs | ~3–5 min | 2–3 stories |
+| AI & Tech | ~3–5 min | 2–3 stories |
+| Markets | ~4 min | Watchlist company news, prioritised by tier |
 | Closing | ~30 s | Sign-off |
 | **Total** | **~10 min** | |
+
+**Tuesday–Friday (short):**
+
+| Segment | Duration | Content |
+|---|---|---|
+| Intro jingle | ~5–10 s | Audio asset from Freesound |
+| Carmen's intro | ~20 s | Brief preview |
+| Global Strategic Affairs | ~90 s | 1–2 stories |
+| AI & Tech | ~90 s | 1–2 stories |
+| Markets | ~60–120 s | 1–3 companies |
+| Closing | ~20 s | Brief sign-off |
+| **Total** | **~6 min** | |
 
 ---
 
@@ -119,18 +203,15 @@ WATCHLIST = {
 
 ---
 
-## Timezone adjustment
+## Cron schedule (VPS — Europe/Helsinki, EEST = UTC+3)
 
-The cron schedule runs at **06:00 UTC**:
+```cron
+# Main run: 07:00 EEST = 06:00 CEST (Denmark local time), Mon–Fri only
+0 7 * * 1-5 /opt/carmen/run_briefing.sh
 
-| Season | UTC offset | Local time | Action needed |
-|---|---|---|---|
-| CET (winter) | UTC+1 | 07:00 ✓ | None — default cron `0 6 * * *` |
-| CEST (summer) | UTC+2 | 08:00 | Change cron to `0 5 * * *` |
-
-**When to change:**
-- **Last Sunday of March** (CEST begins) → edit `.github/workflows/daily_briefing.yml`, change cron to `0 5 * * *`
-- **Last Sunday of October** (CET begins) → revert cron to `0 6 * * *`
+# Catch-up: 09:00 EEST (08:00 Denmark), Mon–Fri, only if today's episode is missing
+0 9 * * 1-5 [ -f /opt/carmen/episodes/$(date +\%Y-\%m-\%d).mp3 ] || /opt/carmen/run_briefing.sh
+```
 
 ---
 
@@ -155,15 +236,17 @@ The cron schedule runs at **06:00 UTC**:
 ## Architecture
 
 ```
-GitHub Actions (cron 06:00 UTC)
-  ├── fetch_geo_news.py    → tmp/geo_stories.json
-  ├── fetch_market_news.py → tmp/market_stories.json
-  ├── generate_script.py   → tmp/script.txt + tmp/segments.json
-  ├── synthesise_audio.py  → tmp/segments/segment_NN.mp3
-  ├── stitch_audio.py      → episodes/YYYY-MM-DD.mp3
-  └── manage_archive.py    → episodes/index.json (keeps 3 newest)
+Hetzner VPS cron (07:00 EEST, Mon–Fri)
+  ├── fetch_geo_news.py    --segment strategic  → tmp/strategic_stories.json
+  ├── fetch_geo_news.py    --segment tech       → tmp/tech_stories.json
+  ├── fetch_market_news.py                      → tmp/market_stories.json
+  ├── generate_script.py                        → tmp/script.txt + tmp/segments.json
+  ├── synthesise_audio.py                       → tmp/segments/segment_NN.mp3
+  ├── stitch_audio.py                           → episodes/YYYY-MM-DD.mp3
+  ├── manage_archive.py                         → episodes/index.json (keeps 3 newest)
+  └── post_to_dashboard.py                      → dash.stefannormann.com/api/news
          ↓
-    git push → GitHub Pages
+    nginx serves episodes directly at carmen.stefannormann.com
          ↓
-    iPhone PWA at github.io/carmen-briefing/web/
+    iPhone PWA
 ```

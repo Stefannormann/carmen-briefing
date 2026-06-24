@@ -266,20 +266,76 @@ def main():
 
     market_stories = load_json(MARKET_FILE, "market_stories")
 
-    # Apply watchlist prioritisation, cap to top 15, then guarantee
-    # at least one Tier 2 and one Tier 3 company is included.
-    market_stories_sorted = prioritise_stories(market_stories)
-    market_stories = enforce_tier_diversity(market_stories_sorted, market_stories_sorted[:15])
+    # ── Day-of-week episode rules ──────────────────────────────────────────────
+    today_weekday = date.today().weekday()   # 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri
+    is_short_episode = today_weekday in (1, 2, 3, 4)   # Tue–Fri: 6-minute format
+    is_wednesday = today_weekday == 2
+
+    if is_short_episode:
+        strategic_stories = strategic_stories[:2]
+        tech_stories      = tech_stories[:2]
+
+    # Wednesday markets segment: reduced tier debuff so Tier 2/3 stories compete
+    tier_debuff = 0.4 if is_wednesday else 1.0
+    market_stories_sorted = prioritise_stories(market_stories, tier_debuff_multiplier=tier_debuff)
+
+    # Cap market candidates: tighter pool for short episodes
+    market_cap = 7 if is_short_episode else 15
+    market_stories = enforce_tier_diversity(market_stories_sorted, market_stories_sorted[:market_cap])
+
     print(
         f"Using {len(strategic_stories)} strategic + "
         f"{len(tech_stories)} tech + "
         f"{len(market_stories)} market stories."
+        + (f" [short episode, tier_debuff={tier_debuff}]" if is_short_episode else "")
     )
+
+    # ── Markets time budget for short episodes ─────────────────────────────────
+    markets_budget_secs: int | None = None
+    if is_short_episode:
+        macro_secs = len(strategic_stories) * 90
+        tech_secs  = len(tech_stories) * 90
+        markets_budget_secs = max(360 - 60 - macro_secs - tech_secs, 60)
 
     today = date.today().strftime("%A, %d %B %Y")
 
-    prompt = (
-        f"Today's date: {today}\n\n"
+    prompt = f"Today's date: {today}\n\n"
+
+    if is_short_episode:
+        macro_n    = len(strategic_stories)
+        tech_n     = len(tech_stories)
+        macro_secs = macro_n * 90
+        tech_secs  = tech_n * 90
+        prompt += (
+            "EPISODE SCHEDULING CONTEXT — FOLLOW EXACTLY:\n"
+            "Episode type: SHORTENED (Tuesday–Friday format)\n"
+            f"Target total duration: 6 minutes (360 seconds)\n"
+            f"Budget breakdown:\n"
+            f"  Intro + closing:          ~60 seconds\n"
+            f"  Global Strategic Affairs: {macro_n} stor{'y' if macro_n == 1 else 'ies'}"
+            f" × ~90 seconds = ~{macro_secs} seconds\n"
+            f"  AI & Tech:                {tech_n} stor{'y' if tech_n == 1 else 'ies'}"
+            f" × ~90 seconds = ~{tech_secs} seconds\n"
+            f"  Markets segment:          ~{markets_budget_secs} seconds remaining\n"
+            "\n"
+            "STRUCTURE OVERRIDES FOR THIS EPISODE:\n"
+            "1. INTRO — 20 seconds max; one short sentence per segment preview\n"
+            f"2. GLOBAL STRATEGIC AFFAIRS — cover exactly {macro_n}"
+            f" stor{'y' if macro_n == 1 else 'ies'}, ~90 seconds each\n"
+            f"3. AI & TECH — cover exactly {tech_n}"
+            f" stor{'y' if tech_n == 1 else 'ies'}, ~90 seconds each\n"
+            f"4. MARKETS — single flowing narrative;"
+            f" fit within {markets_budget_secs} seconds;"
+            f" cover {max(1, markets_budget_secs // 90)} compan{'y' if markets_budget_secs // 90 <= 1 else 'ies'} maximum\n"
+            "5. CLOSING — 20 seconds max; brief sign-off only\n"
+            "\n"
+            "CRITICAL: Do NOT pad, repeat, or extend beyond the time budget.\n"
+            "Do NOT cover more stories than specified above.\n"
+            "Write tighter, more concise sentences than the standard format.\n"
+            "Every sentence must earn its place. Stop when the budget is spent.\n\n"
+        )
+
+    prompt += (
         "GLOBAL STRATEGIC AFFAIRS STORIES (in selected order, present in this sequence):\n"
         + json.dumps(strategic_stories, indent=2, ensure_ascii=False)
         + "\n\nAI & TECH STORIES (in selected order, present in this sequence):\n"

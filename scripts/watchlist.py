@@ -95,28 +95,39 @@ def get_all_companies():
     return result
 
 
-def prioritise_stories(scored_stories: list[dict]) -> list[dict]:
+def prioritise_stories(
+    scored_stories: list[dict],
+    tier_debuff_multiplier: float = 1.0,
+) -> list[dict]:
     """
     Sort company news stories applying tier priority + traffic exception.
 
     scored_stories: list of dicts, each must have:
         - ticker (str)
         - tier (int)
-        - score (int 1-10, Gemini newsworthiness)
+        - score (int 1-10, newsworthiness)
+
+    tier_debuff_multiplier: scales the penalty applied to Tier 2/3 companies.
+        1.0 = normal (tier1=30, tier2=20, tier3=10 bonus).
+        0.4 = Wednesday reduced debuff — Tier 2/3 stories compete more easily
+              with quieter Tier 1 stories (tier2→26, tier3→22 bonus).
+        Only pass a non-default value for the markets segment.
 
     Returns sorted list, highest priority first.
 
-    Traffic exception: a Tier 2/3 company with score >= 8 is promoted
-    above Tier 1 companies whose score <= 5.
+    Traffic exception: a Tier 2/3 company with score >= 8 always receives at
+    least a bonus of 25, ensuring it beats very quiet Tier 1 stories.
     """
     def sort_key(story):
         tier = story.get("tier", 3)
         score = story.get("score", 5)
-        # Tier 1 normally scores with a large tier bonus
-        tier_bonus = (4 - tier) * 10  # tier1=30, tier2=20, tier3=10
-        # Traffic exception: high-traffic lower-tier story promoted
+        # Tier 1 reference bonus = 30; penalty grows with tier number
+        base_penalty = (tier - 1) * 10                      # tier1=0, tier2=10, tier3=20
+        reduced_penalty = base_penalty * tier_debuff_multiplier
+        tier_bonus = 30 - reduced_penalty                   # tier1=30 always
+        # Traffic exception: high-traffic lower-tier story gets a floor bonus
         if tier > 1 and score >= 8:
-            tier_bonus = 25  # bumps above quiet tier1 (10+score<=15)
+            tier_bonus = max(tier_bonus, 25)
         return -(tier_bonus + score)
 
     return sorted(scored_stories, key=sort_key)
