@@ -41,35 +41,27 @@ def clean_for_speech(text: str) -> str:
     return MARKDOWN_ARTIFACTS.sub("", text)
 
 
-def wrap_in_ssml(
-    text: str,
-    voice: str = CARMEN_VOICE,
-    rate: str  = CARMEN_RATE,
-    pitch: str = CARMEN_PITCH,
-) -> str:
-    """Wrap cleaned segment text in SSML for edge-tts synthesis."""
-    # Safety net: convert any surviving ---TRANSITION--- markers to SSML breaks
-    text = text.replace("---TRANSITION---", f'<break time="{TRANSITION_BREAK_MS}ms"/>')
-    # Convert paragraph breaks to medium pauses
-    text = text.replace("\n\n", f'<break time="{PARAGRAPH_BREAK_MS}ms"/>')
-    # Single newlines become a short pause
-    text = text.replace("\n", " ")
+def prepare_ssml_content(text: str) -> str:
+    """
+    Inject inline SSML break elements into segment text.
 
-    return (
-        f'<speak version="1.0" '
-        f'xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">'
-        f'<voice name="{voice}">'
-        f'<prosody rate="{rate}" pitch="{pitch}">'
-        f'{text}'
-        f'</prosody>'
-        f'</voice>'
-        f'</speak>'
-    )
+    edge-tts 7.x wraps the text in <speak><voice><prosody> itself and sends
+    to Microsoft's WebSocket TTS, which interprets SSML elements inside the
+    prosody wrapper. We therefore only need to inject the inner elements —
+    no outer <speak> document needed, and no ssml= constructor parameter.
+    """
+    # Safety net: convert any surviving ---TRANSITION--- markers
+    text = text.replace("---TRANSITION---", f'<break time="{TRANSITION_BREAK_MS}ms"/>')
+    # Paragraph breaks → medium pause
+    text = text.replace("\n\n", f'<break time="{PARAGRAPH_BREAK_MS}ms"/>')
+    # Single newlines → space
+    text = text.replace("\n", " ")
+    return text
 
 
 async def synthesise_segment(text: str, out_path: Path) -> None:
-    ssml = wrap_in_ssml(text)
-    communicate = edge_tts.Communicate(ssml, CARMEN_VOICE, ssml=True)
+    text = prepare_ssml_content(text)
+    communicate = edge_tts.Communicate(text, CARMEN_VOICE, rate=CARMEN_RATE, pitch=CARMEN_PITCH)
     await communicate.save(str(out_path))
 
 

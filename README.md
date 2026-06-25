@@ -248,8 +248,8 @@ All audio parameters are defined as named constants — no magic numbers buried 
 |---|---|---|
 | `CARMEN_RATE` | `-6%` | Speech speed. Increase toward `0%` if too slow, `-10%` for more deliberate pacing. |
 | `CARMEN_PITCH` | `+0Hz` | Voice pitch. Leave at `0` unless the voice sounds unnatural. |
-| `TRANSITION_BREAK_MS` | `800` | SSML pause (ms) between any inline `---TRANSITION---` markers surviving into segments. |
-| `PARAGRAPH_BREAK_MS` | `400` | SSML pause (ms) inserted at `\n\n` paragraph breaks within a segment. |
+| `TRANSITION_BREAK_MS` | `800` | `<break>` pause (ms) injected for any `---TRANSITION---` markers surviving into a segment. |
+| `PARAGRAPH_BREAK_MS` | `400` | `<break>` pause (ms) injected at `\n\n` paragraph breaks within a segment. |
 
 ### EQ and compression (`stitch_audio.py`)
 
