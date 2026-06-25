@@ -230,11 +230,6 @@ WATCHLIST = {
 |---|---|---|---|
 | Intro jingle | 273159 — "Podcast Jingle" by plasterbrain | CC0 | https://freesound.org/s/273159/ |
 | Transition tone | 333694 — "Thin Bell Ding 3" by Khrinx | CC0 | https://freesound.org/s/333694/ |
-| Ambient background | 387588 — "Piano Ambiance 4 (120bpm)" by Erokia | CC0 | https://freesound.org/s/387588/ |
-
-The ambient track is downloaded automatically by `download_audio_assets.py` alongside
-the other assets (requires `FREESOUND_API_KEY`). Episodes generate fine without it —
-the ambient step is skipped gracefully if `audio/ambient.mp3` is not present.
 
 ---
 
@@ -258,8 +253,6 @@ All audio parameters are defined as named constants — no magic numbers buried 
 | `EQ_FREQUENCY` | `100` Hz | Centre frequency of the bass-boost EQ band. |
 | `EQ_WIDTH` | `2` octaves | Bandwidth of the boost. Narrower = more focused; wider = broader warmth. |
 | `EQ_GAIN_DB` | `+3` dB | Boost amount. Reduce to `1` if the output sounds too muddy. |
-| `AMBIENT_VOLUME_DB` | `-25` dB | Background music level below episode. `-20` louder, `-30` quieter. |
-| `AMBIENT_FADE_MS` | `3000` ms | Duration of ambient fade-in and fade-out. |
 
 ### Punctuation formatting (`generate_script.py`)
 

@@ -33,13 +33,6 @@ ASSETS = [
         "attribution": "Thin Bell Ding 3 by Khrinx — freesound.org/s/333694/ (CC0)",
         "required": True,
     },
-    {
-        "label": "Ambient background music",
-        "sound_id": 387588,
-        "out_path": AUDIO_DIR / "ambient.mp3",
-        "attribution": "Piano Ambiance 4 (120bpm) by Erokia — freesound.org/s/387588/ (CC0)",
-        "required": False,  # Episode generates fine without it; adds background warmth
-    },
 ]
 
 
