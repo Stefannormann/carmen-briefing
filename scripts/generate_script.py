@@ -29,7 +29,9 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = "gpt-4o-mini"
 
 TMP_DIR = Path("tmp")
-SCRIPT_FILE       = TMP_DIR / "script.txt"
+SCRIPT_FILE           = TMP_DIR / "script.txt"
+SCRIPT_RAW_FILE       = TMP_DIR / "script_raw.txt"
+SCRIPT_SANITISED_FILE = TMP_DIR / "script_sanitised.txt"
 SEGMENTS_FILE     = TMP_DIR / "segments.json"
 STRATEGIC_FILE    = TMP_DIR / "strategic_stories.json"
 TECH_FILE         = TMP_DIR / "tech_stories.json"
@@ -68,6 +70,51 @@ def format_for_tts(text: str) -> str:
     return text
 
 
+def sanitise_script(text: str) -> str:
+    """Strip symbols and formatting that would be read aloud literally by the TTS engine.
+
+    Runs on the raw LLM output before format_for_tts() and before segmenting.
+    Acts as a safety net regardless of what the LLM returns.
+    """
+    # Protect TRANSITION markers before any --- substitution
+    text = text.replace("---TRANSITION---", "%%TRANSITION%%")
+
+    # Remove markdown bold and italic
+    text = re.sub(r'\*{1,3}(.*?)\*{1,3}', r'\1', text)
+
+    # Remove markdown headers
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+
+    # Remove URLs entirely
+    text = re.sub(r'https?://\S+', '', text)
+    text = re.sub(r'www\.\S+', '', text)
+
+    # Remove domain-style references (e.g. reuters.com, ft.com)
+    text = re.sub(r'\b\w+\.(com|org|net|io|gov|dk|eu|co)\b', '', text)
+
+    # Convert & to "and" so it survives XML escaping downstream
+    text = text.replace('&', ' and ')
+
+    # Replace -- or --- with em-dash
+    text = re.sub(r'---', '—', text)
+    text = re.sub(r'--', '—', text)
+
+    # Replace forward slash used as "or" / "and" with natural alternative
+    text = re.sub(r'(\w+)/(\w+)', r'\1 or \2', text)
+
+    # Remove remaining special characters with no spoken equivalent
+    text = re.sub(r'[\\=|<>{}\[\]@~^`#]', '', text)
+
+    # Clean up duplicate spaces and extra blank lines created by removals above
+    text = re.sub(r'[ \t]{2,}', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    # Restore TRANSITION markers
+    text = text.replace("%%TRANSITION%%", "---TRANSITION---")
+
+    return text.strip()
+
+
 SYSTEM_PROMPT = """\
 You are a professional radio script writer for a daily morning news briefing podcast.
 The host is Carmen — a warm, engaging, professional female journalist who speaks
@@ -84,6 +131,16 @@ WRITING STYLE — RADIO FORMATTING:
 - Use em-dashes (—) rather than commas where a longer pause would feel natural on radio.
 - Never chain more than two clauses with commas in a single sentence.
 - Vary sentence length deliberately — short sentences land harder after longer ones.
+
+CRITICAL FORMATTING RULES — these apply to every word of the script:
+- Write in plain spoken English only. No markdown, no formatting symbols.
+- Do not use: **, *, #, /, \\, =, |, <, >, [], {}, @, ~, ^, `
+- Do not include URLs, domain names, or web addresses anywhere in the script.
+- Do not write source attributions with slashes or punctuation — if attributing a source,
+  write it as natural speech only, e.g. "according to Reuters" not "Reuters.com".
+- Use only standard punctuation: period, comma, em-dash, ellipsis, question mark, exclamation mark.
+- Em-dashes must be written as — (the actual Unicode character), not as -- or ---
+- The only non-spoken marker allowed in the script is the exact string ---TRANSITION--- on its own line.
 
 STRUCTURE:
 
@@ -381,9 +438,13 @@ def main():
     )
 
     print("Generating Carmen's script via Gemini…")
-    script = llm_call(prompt, args.dry_run)
-    script = format_for_tts(script)
+    raw_script = llm_call(prompt, args.dry_run)
+    SCRIPT_RAW_FILE.write_text(raw_script, encoding="utf-8")
 
+    sanitised_script = sanitise_script(raw_script)
+    SCRIPT_SANITISED_FILE.write_text(sanitised_script, encoding="utf-8")
+
+    script = format_for_tts(sanitised_script)
     SCRIPT_FILE.write_text(script, encoding="utf-8")
     print(f"Script saved → {SCRIPT_FILE} ({len(script)} chars)")
 
