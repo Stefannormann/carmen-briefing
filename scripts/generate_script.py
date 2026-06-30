@@ -99,6 +99,44 @@ def sanitise_script(text: str) -> str:
     text = re.sub(r'---', '—', text)
     text = re.sub(r'--', '—', text)
 
+    # Convert any pause markers Gemini might emit into break placeholders.
+    # %%BREAKXXXms%% uses only safe characters that survive html.escape() unchanged.
+    # Real SSML <break> tags are inserted AFTER XML escaping in synthesise_audio.py.
+    # This block must run before the <> stripping below.
+
+    # <break time="400ms"/> or malformed <break time=400ms/>
+    text = re.sub(
+        r'<break\s+time=["\']?(\d+)\s*ms["\']?\s*/?>',
+        lambda m: f'%%BREAK{m.group(1)}ms%%',
+        text, flags=re.IGNORECASE,
+    )
+    # [pause=400ms] or [pause=400]
+    text = re.sub(
+        r'\[pause[=\s]*(\d+)\s*m?s?\]',
+        lambda m: f'%%BREAK{m.group(1)}ms%%',
+        text, flags=re.IGNORECASE,
+    )
+    # (pause 400ms) or (pause 400 milliseconds)
+    text = re.sub(
+        r'\(\s*pause\s+(\d+)\s*(?:ms|milliseconds?)?\s*\)',
+        lambda m: f'%%BREAK{m.group(1)}ms%%',
+        text, flags=re.IGNORECASE,
+    )
+    # pause=400ms or pause=400 as bare text
+    text = re.sub(
+        r'\bpause\s*=\s*(\d+)\s*(?:ms|milliseconds?)?\b',
+        lambda m: f'%%BREAK{m.group(1)}ms%%',
+        text, flags=re.IGNORECASE,
+    )
+    # Remove standalone [pause] / (pause) with no duration
+    text = re.sub(r'\[\s*pause\s*\]', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\(\s*pause\s*\)', '', text, flags=re.IGNORECASE)
+    # Clamp all break durations to a reasonable range (100–2000ms)
+    def _clamp_break(m: re.Match) -> str:
+        ms = max(100, min(int(m.group(1)), 2000))
+        return f'%%BREAK{ms}ms%%'
+    text = re.sub(r'%%BREAK(\d+)ms%%', _clamp_break, text)
+
     # Replace forward slash used as "or" / "and" with natural alternative
     text = re.sub(r'(\w+)/(\w+)', r'\1 or \2', text)
 
@@ -141,6 +179,14 @@ CRITICAL FORMATTING RULES — these apply to every word of the script:
 - Use only standard punctuation: period, comma, em-dash, ellipsis, question mark, exclamation mark.
 - Em-dashes must be written as — (the actual Unicode character), not as -- or ---
 - The only non-spoken marker allowed in the script is the exact string ---TRANSITION--- on its own line.
+
+CRITICAL — PAUSE AND TIMING RULES:
+- Do NOT write any pause instructions, timing markers, or break commands in the script.
+- Do NOT write anything like: [pause], pause=Xms, <break>, (pause), [break], or any variation.
+- Do NOT write technical instructions of any kind inside the script text.
+- Pauses are handled automatically by the audio pipeline. Write spoken words only.
+- To create a natural pause in speech, use punctuation: a period, an em-dash (—), or an ellipsis (...).
+  These are interpreted as pauses automatically. Never write the word "pause" as an instruction.
 
 STRUCTURE:
 

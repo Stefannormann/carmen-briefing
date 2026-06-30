@@ -43,34 +43,38 @@ def clean_for_speech(text: str) -> str:
     return MARKDOWN_ARTIFACTS.sub("", text)
 
 
-def prepare_ssml_content(text: str) -> str:
-    """
-    Inject inline SSML break elements into segment text.
+_BREAK_RE = re.compile(r'%%BREAK(\d+)ms%%')
 
-    edge-tts 7.x wraps the text in <speak><voice><prosody> itself and sends
-    to Microsoft's WebSocket TTS, which interprets SSML elements inside the
-    prosody wrapper. We therefore only need to inject the inner elements —
-    no outer <speak> document needed, and no ssml= constructor parameter.
+
+def prepare_ssml_content(text: str) -> str:
+    """Convert structural markers to %%BREAKXXXms%% placeholders.
+
+    Placeholders use only safe characters (%,digits,m,s) that html.escape()
+    leaves untouched. They are converted to real SSML <break> tags in
+    escape_for_ssml() after XML escaping, guaranteeing html.escape() never
+    corrupts them.
+
+    edge-tts 7.x wraps the text in <speak><voice><prosody> internally — only
+    inner SSML elements are needed here; no outer <speak> wrapper.
     """
     # Safety net: convert any surviving ---TRANSITION--- markers
-    text = text.replace("---TRANSITION---", f'<break time="{TRANSITION_BREAK_MS}ms"/>')
-    # Paragraph breaks → medium pause
-    text = text.replace("\n\n", f'<break time="{PARAGRAPH_BREAK_MS}ms"/>')
+    text = text.replace("---TRANSITION---", f'%%BREAK{TRANSITION_BREAK_MS}ms%%')
+    # Paragraph breaks → medium pause placeholder
+    text = text.replace("\n\n", f'%%BREAK{PARAGRAPH_BREAK_MS}ms%%')
     # Single newlines → space
     text = text.replace("\n", " ")
     return text
 
 
 def escape_for_ssml(text: str) -> str:
-    """Escape XML-reserved characters in spoken text while preserving <break/> tags.
+    """Escape XML chars, then convert break placeholders to SSML break tags.
 
-    Called after prepare_ssml_content() so that break tags are already in place.
-    html.escape() turns < > & into entities; we then restore the break tags we inserted.
+    Order is critical: html.escape() runs first on plain text, then the
+    placeholders (which survived escaping unchanged) become real SSML elements.
+    This guarantees the break tags are never touched by html.escape().
     """
     text = html.escape(text, quote=False)
-    # Restore <break time="Nms"/> tags escaped by html.escape
-    text = text.replace("&lt;break", "<break")
-    text = text.replace("/&gt;", "/>")
+    text = _BREAK_RE.sub(r'<break time="\1ms"/>', text)
     return text
 
 
