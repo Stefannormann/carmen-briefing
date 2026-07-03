@@ -76,8 +76,11 @@ def sanitise_script(text: str) -> str:
     Runs on the raw LLM output before format_for_tts() and before segmenting.
     Acts as a safety net regardless of what the LLM returns.
     """
-    # Protect TRANSITION markers before any --- substitution
+    # Protect TRANSITION markers before any --- substitution.
+    # Also promote bare --- section dividers (Gemini's common fallback when
+    # it misreads the no-em-dash-as-dashes rule) to full TRANSITION markers.
     text = text.replace("---TRANSITION---", "%%TRANSITION%%")
+    text = re.sub(r'(?m)^---\s*$', '%%TRANSITION%%', text)
 
     # Remove markdown bold and italic
     text = re.sub(r'\*{1,3}(.*?)\*{1,3}', r'\1', text)
@@ -178,7 +181,9 @@ CRITICAL FORMATTING RULES — these apply to every word of the script:
   write it as natural speech only, e.g. "according to Reuters" not "Reuters.com".
 - Use only standard punctuation: period, comma, em-dash, ellipsis, question mark, exclamation mark.
 - Em-dashes must be written as — (the actual Unicode character), not as -- or ---
+- Do NOT write bare --- as a section divider or horizontal rule. Use ---TRANSITION--- instead.
 - The only non-spoken marker allowed in the script is the exact string ---TRANSITION--- on its own line.
+  Note: ---TRANSITION--- is explicitly exempt from the no-dashes rule above — it is required.
 
 CRITICAL — PAUSE AND TIMING RULES:
 - Do NOT write any pause instructions, timing markers, or break commands in the script.
