@@ -8,13 +8,14 @@ Usage:
 
 import argparse
 import asyncio
-import html
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 import edge_tts
+from pydub import AudioSegment
 
 # ── Voice and SSML tuning constants ──────────────────────────────────────────
 # Change CARMEN_VOICE to switch accent:
@@ -49,13 +50,13 @@ _BREAK_RE = re.compile(r'%%BREAK(\d+)ms%%')
 def prepare_ssml_content(text: str) -> str:
     """Convert structural markers to %%BREAKXXXms%% placeholders.
 
-    Placeholders use only safe characters (%,digits,m,s) that html.escape()
-    leaves untouched. They are converted to real SSML <break> tags in
-    escape_for_ssml() after XML escaping, guaranteeing html.escape() never
-    corrupts them.
-
-    edge-tts 7.x wraps the text in <speak><voice><prosody> internally — only
-    inner SSML elements are needed here; no outer <speak> wrapper.
+    edge-tts 7.x's Communicate class XML-escapes the *entire* input text
+    before embedding it in its own <speak><voice><prosody> template (see
+    Communicate.__init__ in edge_tts/communicate.py). That means any literal
+    <break> tag we hand it gets escaped to "&lt;break .../&gt;" and read back
+    aloud as words — inline SSML injection is not supported by this version.
+    So these placeholders are never turned into <break> tags; split_into_chunks()
+    below uses them to splice in real silence with pydub instead.
     """
     # Safety net: convert any surviving ---TRANSITION--- markers
     text = text.replace("---TRANSITION---", f'%%BREAK{TRANSITION_BREAK_MS}ms%%')
@@ -66,25 +67,40 @@ def prepare_ssml_content(text: str) -> str:
     return text
 
 
-def escape_for_ssml(text: str) -> str:
-    """Escape XML chars, then convert break placeholders to SSML break tags.
-
-    Order is critical: html.escape() runs first on plain text, then the
-    placeholders (which survived escaping unchanged) become real SSML elements.
-    This guarantees the break tags are never touched by html.escape().
-    """
-    text = html.escape(text, quote=False)
-    text = _BREAK_RE.sub(r'<break time="\1ms"/>', text)
-    return text
+def split_into_chunks(text: str) -> list[tuple[str, int]]:
+    """Split placeholder-marked text into (spoken_text, trailing_pause_ms) pairs."""
+    parts = _BREAK_RE.split(text)
+    chunks = [(parts[i], int(parts[i + 1])) for i in range(0, len(parts) - 1, 2)]
+    chunks.append((parts[-1], 0))
+    return [(t.strip(), ms) for t, ms in chunks if t.strip() or ms]
 
 
 async def synthesise_segment(text: str, out_path: Path) -> str:
-    """Synthesise one segment to MP3. Returns the processed SSML content for debug logging."""
+    """Synthesise one segment to MP3, splicing real silence at break points.
+
+    Returns a debug string describing the chunk/pause structure for logging.
+    """
     text = prepare_ssml_content(text)
-    text = escape_for_ssml(text)
-    communicate = edge_tts.Communicate(text, CARMEN_VOICE, rate=CARMEN_RATE, pitch=CARMEN_PITCH)
-    await communicate.save(str(out_path))
-    return text
+    chunks = split_into_chunks(text)
+
+    audio = AudioSegment.empty()
+    debug_parts = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for idx, (chunk_text, pause_ms) in enumerate(chunks):
+            if chunk_text:
+                part_path = Path(tmpdir) / f"part_{idx:02d}.mp3"
+                communicate = edge_tts.Communicate(
+                    chunk_text, CARMEN_VOICE, rate=CARMEN_RATE, pitch=CARMEN_PITCH
+                )
+                await communicate.save(str(part_path))
+                audio += AudioSegment.from_mp3(str(part_path))
+                debug_parts.append(chunk_text)
+            if pause_ms:
+                audio += AudioSegment.silent(duration=pause_ms)
+                debug_parts.append(f'<break time="{pause_ms}ms"/>')
+
+    audio.export(str(out_path), format="mp3")
+    return " ".join(debug_parts)
 
 
 async def main_async(dry_run: bool) -> None:

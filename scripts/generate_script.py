@@ -412,7 +412,12 @@ def main():
 
     # ── Day-of-week episode rules ──────────────────────────────────────────────
     today_weekday = date.today().weekday()   # 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri
-    is_short_episode = today_weekday in (1, 2, 3, 4)   # Tue–Fri: 6-minute format
+    # Every weekday targets the same ~6-7 minute format. Monday still gets a
+    # wider 72h fetch window (see fetch_geo_news.py / fetch_market_news.py) to
+    # catch up on the weekend, but the episode itself should stay short — the
+    # old "full-length Monday" behaviour produced 10-15 minute episodes that
+    # OOM-killed stitch_audio.py on the VPS's 3.7GB RAM.
+    is_short_episode = True
     is_wednesday = today_weekday == 2
 
     if is_short_episode:
