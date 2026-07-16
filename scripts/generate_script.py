@@ -55,12 +55,12 @@ def format_for_tts(text: str) -> str:
     #    e.g. "The answer is China" → "The answer is... China"
     text = re.sub(r'\b(is|are|was|were|means|signals|suggests)\s+([A-Z])', r'\1... \2', text)
 
-    # 3. Break sentences longer than 20 words at natural conjunction points.
+    # 3. Break sentences longer than 30 words at natural conjunction points.
     sentences = text.split('. ')
     formatted = []
     for sentence in sentences:
         words = sentence.split()
-        if len(words) > 20:
+        if len(words) > 30:
             sentence = re.sub(
                 r'\s+(and|but|which|because|however)\s+', r'. \1 ', sentence, count=1
             )
@@ -168,10 +168,13 @@ Do NOT include stage directions, sound cues, or production notes.
 Write only Carmen's spoken words.
 
 WRITING STYLE — RADIO FORMATTING:
-- Prefer short, punchy sentences. Target 12–15 words maximum per sentence.
+- Write natural, flowing broadcaster sentences — aim for roughly 18–22 words on average.
+- Occasional short sentences are welcome for emphasis, and occasional longer ones are fine
+  when a thought genuinely needs the room — but don't force every sentence short.
 - Use em-dashes (—) rather than commas where a longer pause would feel natural on radio.
-- Never chain more than two clauses with commas in a single sentence.
-- Vary sentence length deliberately — short sentences land harder after longer ones.
+- Avoid chaining more than three clauses with commas in a single sentence.
+- Vary sentence length deliberately — a mix of short and longer sentences reads better aloud
+  than a uniform staccato of short ones.
 
 CRITICAL FORMATTING RULES — these apply to every word of the script:
 - Write in plain spoken English only. No markdown, no formatting symbols.
