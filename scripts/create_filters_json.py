@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.geo_sources import GEO_RSS_TIER_1, GEO_RSS_TIER_2
-from config.geo_keywords import GEO_KEYWORDS
+from config.geo_keywords import STRATEGIC_KEYWORDS, TECH_KEYWORDS
 from scripts.watchlist import WATCHLIST
 
 DEFAULT_OUTPUT = Path("filters.json")
@@ -31,7 +31,8 @@ def build_filters() -> dict:
             "tier1": GEO_RSS_TIER_1,
             "tier2": GEO_RSS_TIER_2,
         },
-        "geo_keywords": GEO_KEYWORDS,
+        "strategic_keywords": STRATEGIC_KEYWORDS,
+        "tech_keywords": TECH_KEYWORDS,
         "companies": WATCHLIST,
     }
 
@@ -56,10 +57,14 @@ def main():
     filters = build_filters()
     args.output.write_text(json.dumps(filters, indent=2, ensure_ascii=False))
     action = "Overwrote" if args.output.exists() else "Created"
+    keyword_count = (
+        sum(len(v) for v in filters["strategic_keywords"].values())
+        + sum(len(v) for v in filters["tech_keywords"].values())
+    )
     print(f"{action} {args.output} ({len(filters['companies']['tier1'])} T1, "
           f"{len(filters['companies']['tier2'])} T2, "
           f"{len(filters['companies']['tier3'])} T3 companies; "
-          f"{sum(len(v) for v in filters['geo_keywords'].values())} keywords; "
+          f"{keyword_count} keywords; "
           f"{len(filters['geo_sources']['tier1']) + len(filters['geo_sources']['tier2'])} RSS feeds)")
 
 

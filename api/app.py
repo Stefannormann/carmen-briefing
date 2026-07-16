@@ -1,6 +1,6 @@
 """
 Carmen Briefing — REST API
-Runs on 127.0.0.1:5000, proxied by nginx at /api/
+Runs on 127.0.0.1:5001, proxied by nginx at /api/
 
 Endpoints (all return JSON):
   GET  /api/health              — liveness check (no auth)
@@ -15,7 +15,7 @@ Auth:
 
 Usage (server):
   source venv/bin/activate
-  gunicorn -w 1 -b 127.0.0.1:5000 api.app:app --chdir /opt/carmen
+  gunicorn -w 1 -b 127.0.0.1:5001 api.app:app --chdir /opt/carmen
   # Or run via systemd: see scripts/setup_server.sh notes
 """
 
@@ -124,7 +124,7 @@ def update_filters():
     if not data:
         abort(400, description="Request body must be valid JSON.")
 
-    required_keys = {"geo_sources", "geo_keywords", "companies"}
+    required_keys = {"geo_sources", "strategic_keywords", "tech_keywords", "companies"}
     missing = required_keys - set(data.keys())
     if missing:
         abort(400, description=f"Missing required keys: {', '.join(sorted(missing))}")

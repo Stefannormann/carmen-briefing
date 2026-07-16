@@ -481,6 +481,157 @@
       background: #fff;
     }
 
+    /* ── Content Filters ──────────────────────────────────── */
+    .filter-subsection { margin-bottom: 20px; }
+    .filter-subsection:last-child { margin-bottom: 0; }
+    .filter-subsection h4 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    .filter-group { margin-bottom: 14px; }
+    .filter-group:last-child { margin-bottom: 0; }
+    .filter-group-label {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+    .filter-row:last-of-type { border-bottom: none; }
+    .filter-row-text { flex: 1; min-width: 0; overflow-wrap: break-word; color: var(--text); }
+    .filter-remove-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .filter-remove-btn:hover { background: var(--surface2); color: var(--accent); }
+
+    .chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface2);
+      border-radius: 14px;
+      padding: 4px 6px 4px 10px;
+      font-size: 0.76rem;
+      color: var(--text);
+    }
+    .chip button {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: 0.9rem; line-height: 1; padding: 0 2px;
+    }
+    .chip button:hover { color: var(--accent); }
+
+    .filter-add-row { display: flex; gap: 6px; margin-top: 4px; }
+    .filter-add-row input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 0.8rem;
+      flex: 1;
+      min-width: 0;
+    }
+    .filter-add-row button {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .filter-add-row button:active { opacity: 0.8; }
+
+    .company-row { padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .company-row:last-of-type { border-bottom: none; }
+    .company-row-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .company-row-bottom { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 0.74rem; color: var(--muted); }
+    .muted-inline { color: var(--muted); font-size: 0.78rem; }
+
+    .company-add-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .company-add-form input, .company-add-form select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 0.8rem;
+    }
+    .company-add-form input { flex: 1 1 100px; min-width: 70px; }
+    .company-add-form select { flex: 0 0 74px; }
+    .company-add-form button {
+      background: var(--accent); border: none; color: #fff; border-radius: 8px;
+      padding: 7px 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      flex: 1 1 100%;
+    }
+
+    .tier-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 3px 6px;
+      font-size: 0.74rem;
+    }
+
+    .filters-token-gate input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 0.85rem;
+      margin: 8px 0;
+    }
+    .filters-token-gate button, .filters-save-btn, .filters-reload-btn {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      padding: 9px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+    .filters-reload-btn {
+      background: var(--surface2);
+      color: var(--text);
+      margin-top: 8px;
+    }
+    .filters-status { font-size: 0.78rem; color: var(--muted); margin-top: 8px; min-height: 16px; }
+    .filters-status.error { color: var(--accent); }
+    .filters-status.ok { color: #7cd992; }
+
+    .filters-lock-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .filters-lock-row button {
+      background: none; border: none; color: var(--muted); font-size: 0.74rem;
+      cursor: pointer; text-decoration: underline;
+    }
+
     #biometric-enroll-btn {
       display: none;
       margin-top: 10px;
@@ -622,6 +773,54 @@
     <button class="settings-close" onclick="closeSettings()" aria-label="Close settings">×</button>
   </div>
   <div class="settings-body">
+
+    <div class="accordion-item">
+      <div class="accordion-header" id="acc-filters" onclick="toggleAccordion('filters')" role="button" tabindex="0">
+        <span>🎛 Content Filters</span>
+        <span class="acc-chevron">›</span>
+      </div>
+      <div class="accordion-content" id="acc-content-filters">
+
+        <div id="filters-token-gate" class="filters-token-gate">
+          <p class="setting-desc">Enter the API token to view and edit sources, buzzwords, and the watchlist.</p>
+          <input type="password" id="filters-token-input" placeholder="API token" autocomplete="off"
+                 onkeydown="if(event.key==='Enter') unlockFilters()" />
+          <button onclick="unlockFilters()">Unlock</button>
+          <p class="filters-status" id="filters-gate-status"></p>
+        </div>
+
+        <div id="filters-content" style="display:none">
+          <div class="filters-lock-row">
+            <button onclick="lockFilters()">Lock &amp; forget token</button>
+          </div>
+
+          <div class="filter-subsection">
+            <h4>Sources</h4>
+            <div id="filters-sources"></div>
+          </div>
+
+          <div class="filter-subsection">
+            <h4>Buzzwords — Global Strategic Affairs</h4>
+            <div id="filters-keywords-strategic"></div>
+          </div>
+
+          <div class="filter-subsection">
+            <h4>Buzzwords — AI &amp; Tech</h4>
+            <div id="filters-keywords-tech"></div>
+          </div>
+
+          <div class="filter-subsection">
+            <h4>Company Watchlist</h4>
+            <div id="filters-companies"></div>
+          </div>
+
+          <button class="filters-save-btn" onclick="saveFilters()">Save Changes</button>
+          <button class="filters-reload-btn" onclick="loadFilters(true)">Reload from server</button>
+          <p class="filters-status" id="filters-status"></p>
+        </div>
+
+      </div>
+    </div>
 
     <div class="accordion-item">
       <div class="accordion-header" id="acc-security" onclick="toggleAccordion('security')" role="button" tabindex="0">
@@ -932,7 +1131,282 @@ function toggleAccordion(id) {
   if (!isOpen) {
     header.classList.add('open');
     content.classList.add('open');
+    if (id === 'filters') initFiltersPanel();
   }
+}
+
+/* ── Content Filters (sources / buzzwords / watchlist) ───────── */
+let filtersToken = localStorage.getItem('carmen_api_token') || '';
+let filtersData  = null;
+
+function initFiltersPanel() {
+  if (filtersToken) {
+    document.getElementById('filters-token-gate').style.display = 'none';
+    document.getElementById('filters-content').style.display = '';
+    if (!filtersData) loadFilters();
+    else renderFilters();
+  } else {
+    document.getElementById('filters-token-gate').style.display = '';
+    document.getElementById('filters-content').style.display = 'none';
+  }
+}
+
+function unlockFilters() {
+  const input = document.getElementById('filters-token-input');
+  const token = input.value.trim();
+  if (!token) return;
+  filtersToken = token;
+  localStorage.setItem('carmen_api_token', token);
+  loadFilters();
+}
+
+function lockFilters() {
+  filtersToken = '';
+  filtersData  = null;
+  localStorage.removeItem('carmen_api_token');
+  document.getElementById('filters-content').style.display = 'none';
+  document.getElementById('filters-token-gate').style.display = '';
+  document.getElementById('filters-token-input').value = '';
+  document.getElementById('filters-gate-status').textContent = '';
+}
+
+async function loadFilters(showReloadStatus) {
+  const gateStatus = document.getElementById('filters-gate-status');
+  const status     = document.getElementById('filters-status');
+  if (!filtersToken) return;
+  gateStatus.textContent = 'Loading…';
+  gateStatus.className = 'filters-status';
+  try {
+    const resp = await fetch('/api/filters', {
+      headers: { Authorization: `Bearer ${filtersToken}` },
+    });
+    if (resp.status === 401) throw new Error('Invalid token.');
+    if (!resp.ok) throw new Error(`Server error (${resp.status}).`);
+    filtersData = await resp.json();
+    filtersData.strategic_keywords = filtersData.strategic_keywords || {};
+    filtersData.tech_keywords      = filtersData.tech_keywords      || {};
+    filtersData.geo_sources        = filtersData.geo_sources        || { tier1: [], tier2: [] };
+    filtersData.companies          = filtersData.companies          || { tier1: [], tier2: [], tier3: [] };
+
+    gateStatus.textContent = '';
+    document.getElementById('filters-token-gate').style.display = 'none';
+    document.getElementById('filters-content').style.display = '';
+    renderFilters();
+    if (showReloadStatus) {
+      status.textContent = 'Reloaded from server.';
+      status.className = 'filters-status ok';
+    }
+  } catch (e) {
+    gateStatus.textContent = e.message;
+    gateStatus.className = 'filters-status error';
+    if (showReloadStatus) {
+      status.textContent = e.message;
+      status.className = 'filters-status error';
+    }
+  }
+}
+
+function markFiltersUnsaved() {
+  const status = document.getElementById('filters-status');
+  status.textContent = 'Unsaved changes.';
+  status.className = 'filters-status';
+}
+
+async function saveFilters() {
+  const status = document.getElementById('filters-status');
+  status.textContent = 'Saving…';
+  status.className = 'filters-status';
+  try {
+    const resp = await fetch('/api/filters', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${filtersToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(filtersData),
+    });
+    if (resp.status === 401) throw new Error('Invalid token.');
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      throw new Error(body.message || `Server error (${resp.status}).`);
+    }
+    const result = await resp.json();
+    filtersData.updated_at = result.updated_at;
+    status.textContent = 'Saved — changes apply to the next generated episode.';
+    status.className = 'filters-status ok';
+  } catch (e) {
+    status.textContent = e.message;
+    status.className = 'filters-status error';
+  }
+}
+
+function renderFilters() {
+  renderSources();
+  renderKeywords('strategic');
+  renderKeywords('tech');
+  renderCompanies();
+}
+
+/* Sources */
+function renderSources() {
+  const tiers = [
+    { key: 'tier1', label: 'Tier 1 — always covered' },
+    { key: 'tier2', label: 'Tier 2 — fill-in' },
+  ];
+  document.getElementById('filters-sources').innerHTML = tiers.map(t => {
+    const urls = filtersData.geo_sources[t.key] || [];
+    return `
+      <div class="filter-group">
+        <div class="filter-group-label">${t.label}</div>
+        ${urls.map((url, i) => `
+          <div class="filter-row">
+            <span class="filter-row-text">${escHtml(url)}</span>
+            <button class="filter-remove-btn" onclick="removeSource('${t.key}', ${i})" aria-label="Remove">×</button>
+          </div>
+        `).join('') || '<p class="details-empty">No sources.</p>'}
+        <div class="filter-add-row">
+          <input type="url" id="add-source-${t.key}" placeholder="https://example.com/feed" />
+          <button onclick="addSource('${t.key}')">Add</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function addSource(tierKey) {
+  const input = document.getElementById(`add-source-${tierKey}`);
+  const url = input.value.trim();
+  if (!url) return;
+  filtersData.geo_sources[tierKey] = filtersData.geo_sources[tierKey] || [];
+  filtersData.geo_sources[tierKey].push(url);
+  renderSources();
+  markFiltersUnsaved();
+}
+
+function removeSource(tierKey, index) {
+  filtersData.geo_sources[tierKey].splice(index, 1);
+  renderSources();
+  markFiltersUnsaved();
+}
+
+/* Buzzwords */
+function _kwField(segment) { return segment === 'strategic' ? 'strategic_keywords' : 'tech_keywords'; }
+
+function renderKeywords(segment) {
+  const field = _kwField(segment);
+  const groups = filtersData[field] || {};
+  const categories = Object.keys(groups);
+  document.getElementById(`filters-keywords-${segment}`).innerHTML = categories.map(cat => {
+    const words = groups[cat] || [];
+    return `
+      <div class="filter-group">
+        <div class="filter-group-label">${escHtml(topicLabel(cat))}</div>
+        <div class="chip-list">
+          ${words.map((w, i) => `
+            <span class="chip">${escHtml(w)}<button onclick="removeKeyword('${segment}', '${cat}', ${i})" aria-label="Remove">×</button></span>
+          `).join('') || '<span class="details-empty">None</span>'}
+        </div>
+        <div class="filter-add-row">
+          <input type="text" id="add-kw-${segment}-${cat}" placeholder="Add buzzword…"
+                 onkeydown="if(event.key==='Enter') addKeyword('${segment}', '${cat}')" />
+          <button onclick="addKeyword('${segment}', '${cat}')">Add</button>
+        </div>
+      </div>
+    `;
+  }).join('') || '<p class="details-empty">No categories.</p>';
+}
+
+function addKeyword(segment, category) {
+  const field = _kwField(segment);
+  const input = document.getElementById(`add-kw-${segment}-${category}`);
+  const word = input.value.trim().toLowerCase();
+  if (!word) return;
+  filtersData[field][category] = filtersData[field][category] || [];
+  if (!filtersData[field][category].includes(word)) {
+    filtersData[field][category].push(word);
+  }
+  renderKeywords(segment);
+  markFiltersUnsaved();
+}
+
+function removeKeyword(segment, category, index) {
+  const field = _kwField(segment);
+  filtersData[field][category].splice(index, 1);
+  renderKeywords(segment);
+  markFiltersUnsaved();
+}
+
+/* Company watchlist */
+function renderCompanies() {
+  const tiers = ['tier1', 'tier2', 'tier3'];
+  const rows = tiers.map(t => {
+    const companies = filtersData.companies[t] || [];
+    return `
+      <div class="filter-group">
+        <div class="filter-group-label">Tier ${t.replace('tier', '')}</div>
+        ${companies.map((c, i) => `
+          <div class="company-row">
+            <div class="company-row-top">
+              <span class="filter-row-text">${escHtml(c.name)} <span class="muted-inline">(${escHtml(c.ticker)})</span></span>
+              <button class="filter-remove-btn" onclick="removeCompany('${t}', ${i})" aria-label="Remove">×</button>
+            </div>
+            <div class="company-row-bottom">
+              <span>${escHtml(c.exchange || '')}</span>
+              <select class="tier-select" onchange="moveCompanyTier('${t}', ${i}, this.value)">
+                <option value="tier1" ${t === 'tier1' ? 'selected' : ''}>Tier 1</option>
+                <option value="tier2" ${t === 'tier2' ? 'selected' : ''}>Tier 2</option>
+                <option value="tier3" ${t === 'tier3' ? 'selected' : ''}>Tier 3</option>
+              </select>
+            </div>
+          </div>
+        `).join('') || '<p class="details-empty">No companies.</p>'}
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('filters-companies').innerHTML = rows + `
+    <div class="filter-group">
+      <div class="filter-group-label">Add Company</div>
+      <div class="company-add-form">
+        <input type="text" id="add-co-name" placeholder="Name" />
+        <input type="text" id="add-co-ticker" placeholder="Ticker" />
+        <input type="text" id="add-co-exchange" placeholder="Exchange" />
+        <select id="add-co-tier">
+          <option value="tier1">Tier 1</option>
+          <option value="tier2" selected>Tier 2</option>
+          <option value="tier3">Tier 3</option>
+        </select>
+        <button onclick="addCompany()">Add Company</button>
+      </div>
+    </div>
+  `;
+}
+
+function removeCompany(tierKey, index) {
+  filtersData.companies[tierKey].splice(index, 1);
+  renderCompanies();
+  markFiltersUnsaved();
+}
+
+function moveCompanyTier(fromTier, index, toTier) {
+  if (fromTier === toTier) return;
+  const [company] = filtersData.companies[fromTier].splice(index, 1);
+  filtersData.companies[toTier] = filtersData.companies[toTier] || [];
+  filtersData.companies[toTier].push(company);
+  renderCompanies();
+  markFiltersUnsaved();
+}
+
+function addCompany() {
+  const name     = document.getElementById('add-co-name').value.trim();
+  const ticker   = document.getElementById('add-co-ticker').value.trim().toUpperCase();
+  const exchange = document.getElementById('add-co-exchange').value.trim();
+  const tier     = document.getElementById('add-co-tier').value;
+  if (!name || !ticker) return;
+  filtersData.companies[tier] = filtersData.companies[tier] || [];
+  filtersData.companies[tier].push({ name, ticker, exchange });
+  renderCompanies();
+  markFiltersUnsaved();
 }
 
 /* ── WebAuthn biometric ──────────────────────────────────────── */
